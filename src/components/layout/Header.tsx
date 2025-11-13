@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Stethoscope, LogOut, Menu } from "lucide-react";
+import { Stethoscope, LogOut, Menu, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -9,7 +9,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useAuth, useUser } from "@/firebase";
-import { AuthModal } from "@/components/auth/AuthModal";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { getInitials } from "@/lib/utils";
 import {
@@ -20,6 +19,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
+import { toast } from "@/hooks/use-toast";
 
 const navLinks = [
     { href: "/", label: "Home" },
@@ -33,6 +34,16 @@ export default function Header() {
 
   const handleLogout = async () => {
     await auth.signOut();
+  };
+
+  const handleLogin = () => {
+    try {
+        initiateAnonymousSignIn(auth);
+        toast({ title: "Logged In", description: "You are now logged in with a temporary account." });
+    } catch (error) {
+        console.error("Anonymous sign-in failed:", error);
+        toast({ title: "Login Failed", description: "Could not log in anonymously. Please try again.", variant: "destructive" });
+    }
   };
 
   return (
@@ -58,16 +69,16 @@ export default function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-9 w-9">
-                      <AvatarFallback>{user.phoneNumber ? getInitials(user.phoneNumber) : 'U'}</AvatarFallback>
+                      <AvatarFallback>{user.isAnonymous ? 'A' : getInitials(user.uid)}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">My Account</p>
+                      <p className="text-sm font-medium leading-none">Anonymous User</p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        {user.phoneNumber}
+                        {user.uid}
                       </p>
                     </div>
                   </DropdownMenuLabel>
@@ -79,7 +90,9 @@ export default function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <AuthModal />
+                <Button onClick={handleLogin}>
+                    <LogIn className="mr-2 h-4 w-4" /> Login
+                </Button>
             )
           )}
         </div>
