@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { Stethoscope, LogOut, Menu, User as UserIcon, Sparkles } from "lucide-react";
+import { Stethoscope, LogOut, Menu, User as UserIcon, Sparkles, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -80,11 +80,18 @@ export default function Header() {
                       <p className="text-sm font-medium leading-none">
                         {user.isAnonymous ? "Guest User" : (user.displayName || user.email || user.phoneNumber)}
                       </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user.uid}
-                      </p>
+                      {!user.isAnonymous && <p className="text-xs leading-none text-muted-foreground">
+                        {user.email || user.phoneNumber}
+                      </p>}
                     </div>
                   </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                      <Link href="/profile">
+                        <UserCog className="mr-2 h-4 w-4" />
+                        <span>My Profile</span>
+                      </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />

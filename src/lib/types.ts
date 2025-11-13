@@ -1,3 +1,8 @@
+export type EmergencyContact = {
+  name: string;
+  phone: string;
+}
+
 export type User = {
   id: string;
   name: string;
@@ -5,6 +10,7 @@ export type User = {
   email?: string;
   role: 'patient' | 'admin';
   createdAt: string;
+  emergencyContacts?: EmergencyContact[];
 };
 
 export type Doctor = {
@@ -67,3 +73,5 @@ export type EmergencyRoom = {
     mapUrl: string;
     imageId: string;
 }
+
+    

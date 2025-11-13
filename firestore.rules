@@ -8,6 +8,7 @@
  *
  * Key Security Decisions:
  * - User listing is disallowed to protect user privacy.
+ * - Users can only read and write to their own profile document.
  * - Doctor and clinic information is publicly readable to facilitate discovery.
  * - Write access to all log collections is restricted to the backend (simulated by `if false`).
  * - All destructive operations (update, delete) require verifying the document's existence.
@@ -31,7 +32,9 @@ service cloud.firestore {
       allow get: if isOwner(userId);
       allow list: if false; // User listing is disallowed for privacy.
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow update: if isExistingOwner(userId) 
+                      && request.resource.data.id == resource.data.id
+                      && request.resource.data.emergencyContacts.size() <= 3; // Ensure max 3 contacts
       allow delete: if isExistingOwner(userId);
     }
 

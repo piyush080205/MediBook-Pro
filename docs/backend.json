@@ -33,19 +33,31 @@
           "format": "date-time"
         },
         "chronicFlags": {
-            "type": "array",
-            "description": "A list of chronic conditions the user has.",
-            "items": { "type": "string" }
+          "type": "array",
+          "description": "A list of chronic conditions the user has.",
+          "items": { "type": "string" }
         },
         "healthWallet": {
+          "type": "object",
+          "description": "Contains user's health records.",
+          "properties": {
+            "prescriptions": { "type": "array", "items": { "type": "string" } },
+            "labReports": { "type": "array", "items": { "type": "string" } },
+            "vaccinationReminders": { "type": "array", "items": { "type": "string" } },
+            "insuranceCardUrl": { "type": "string" }
+          }
+        },
+        "emergencyContacts": {
+          "type": "array",
+          "description": "A list of emergency contacts for the user.",
+          "items": {
             "type": "object",
-            "description": "Contains user's health records.",
             "properties": {
-                "prescriptions": { "type": "array", "items": { "type": "string" } },
-                "labReports": { "type": "array", "items": { "type": "string" } },
-                "vaccinationReminders": { "type": "array", "items": { "type": "string" } },
-                "insuranceCardUrl": { "type": "string" }
-            }
+              "name": { "type": "string" },
+              "phone": { "type": "string" }
+            },
+            "required": ["name", "phone"]
+          }
         }
       },
       "required": [
