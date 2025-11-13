@@ -1,4 +1,3 @@
-// Queue Prediction
 'use server';
 /**
  * @fileOverview Predicts clinic queue length and wait time.
@@ -48,8 +47,30 @@ const predictQueueFlow = ai.defineFlow(
     inputSchema: QueuePredictionInputSchema,
     outputSchema: QueuePredictionOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
+  async (input, streamingCallback) => {
+    const maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+      try {
+        const {output} = await prompt(input);
+        return output!;
+      } catch (error: any) {
+        attempt++;
+        if (error.message.includes('503') && attempt < maxRetries) {
+          if (streamingCallback) {
+             await streamingCallback({
+              custom: `Model is overloaded, retrying... (Attempt ${attempt}/${maxRetries})`,
+            });
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Wait longer each time
+        } else {
+          // If it's not a 503 error or we've run out of retries, throw the error
+          throw error;
+        }
+      }
+    }
+    // This part should not be reachable if the loop is correct, but satisfies TypeScript
+    throw new Error('Failed to get a response from the model after multiple retries.');
   }
 );
