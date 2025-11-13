@@ -22,7 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Stethoscope, Sparkles, Loader2, Activity, ArrowRightCircle, ShieldAlert, HeartPulse } from 'lucide-react';
+import { Stethoscope, Sparkles, Loader2, Activity, ArrowRightCircle, ShieldAlert, HeartPulse, HelpCircle } from 'lucide-react';
 import { runSmartTriage } from '@/app/actions';
 import { toast } from '@/hooks/use-toast';
 import type { SmartTriageOutput } from '@/ai/flows/smart-triage-engine';
@@ -35,8 +35,8 @@ import { WifiOff } from 'lucide-react';
 
 
 const triageFormSchema = z.object({
-  symptoms: z.string().min(10, {
-    message: "Please describe your symptoms in at least 10 characters.",
+  symptoms: z.string().min(5, {
+    message: "Please describe your symptoms or question in at least 5 characters.",
   }),
   age: z.coerce.number().min(0).max(120).optional(),
   gender: z.enum(["M", "F", "O"]).optional(),
@@ -52,7 +52,6 @@ export default function TriagePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Set initial online status and listen for changes
     const updateOnlineStatus = () => {
       setIsOnline(navigator.onLine);
     };
@@ -60,7 +59,6 @@ export default function TriagePage() {
     window.addEventListener('offline', updateOnlineStatus);
     updateOnlineStatus();
 
-    // Load cached result if offline
     if (!navigator.onLine) {
         const cachedResult = localStorage.getItem(LAST_TRIAGE_RESULT_KEY);
         if (cachedResult) {
@@ -87,7 +85,7 @@ export default function TriagePage() {
     if (!isOnline) {
         toast({
             title: "You are offline",
-            description: "Please connect to the internet to run a new triage.",
+            description: "Please connect to the internet to run a new analysis.",
             variant: "destructive",
         });
         return;
@@ -101,11 +99,11 @@ export default function TriagePage() {
           chronicFlags: values.chronicFlags?.split(',').map(s => s.trim()).filter(s => s),
       });
       setTriageResult(result);
-      localStorage.setItem(LAST_TRIAGE_RESULT_KEY, JSON.stringify(result)); // Cache result
+      localStorage.setItem(LAST_TRIAGE_RESULT_KEY, JSON.stringify(result));
     } catch (error) {
       toast({
-        title: "Triage Failed",
-        description: "An error occurred while analyzing your symptoms. Please try again.",
+        title: "Analysis Failed",
+        description: "An error occurred while analyzing your request. Please try again.",
         variant: "destructive",
       });
       console.error(error);
@@ -126,15 +124,125 @@ export default function TriagePage() {
     localStorage.removeItem(LAST_TRIAGE_RESULT_KEY);
   }
   
-  const getRiskCategoryClass = (category: 'low' | 'medium' | 'high') => {
+  const getRiskCategoryClass = (category: 'low' | 'medium' | 'high' | undefined) => {
     switch (category) {
       case 'high':
         return 'bg-destructive text-destructive-foreground';
       case 'medium':
         return 'bg-yellow-500 text-black';
-      default:
+      case 'low':
         return 'bg-green-500 text-white';
+      default:
+        return 'bg-secondary text-secondary-foreground';
     }
+  }
+
+  const renderResult = () => {
+    if (!triageResult) return null;
+
+    if (triageResult.isQuery) {
+        return (
+            <div className="space-y-6 pt-4">
+                <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold flex items-center justify-center gap-2">
+                        <HelpCircle className="h-6 w-6 text-primary" />
+                        First-Aid Information
+                    </h3>
+                </div>
+                <div>
+                    <h4 className="font-semibold mb-2">Procedure Explanation:</h4>
+                    <ul className="space-y-2">
+                        {triageResult.procedureExplanation?.map((step, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                                <ArrowRightCircle className="w-4 h-4 mt-1 text-primary shrink-0"/> 
+                                <span className="text-muted-foreground">{step}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                 <div className="flex flex-col sm:flex-row gap-2 pt-4">
+                    <Button variant="ghost" onClick={resetForm} disabled={!isOnline}>Ask Another Question</Button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6 pt-4">
+            <div className="text-center space-y-2">
+                <h3 className="text-xl font-bold">AI Triage & Risk Assessment Result</h3>
+                 <div className={cn('inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-base font-bold', getRiskCategoryClass(triageResult.riskCategory))}>
+                    <HeartPulse className="h-5 w-5"/>
+                    <span>Risk Level: {triageResult.riskCategory?.toUpperCase()} ({triageResult.riskScore}/100)</span>
+                </div>
+            </div>
+
+            <div className="rounded-lg border bg-card p-4 grid md:grid-cols-2 gap-4">
+                <div className="flex items-start gap-3">
+                    <Stethoscope className="w-5 h-5 mt-1 text-primary shrink-0" />
+                    <div>
+                        <h4 className="font-semibold">Recommended Specialty</h4>
+                        <p className="text-muted-foreground">{triageResult.recommendedSpecialty}</p>
+                    </div>
+                </div>
+                <div className="flex items-start gap-3">
+                    <Activity className="w-5 h-5 mt-1 text-primary shrink-0"/>
+                    <div>
+                        <h4 className="font-semibold">Urgency Level</h4>
+                        <p className="text-muted-foreground capitalize">{triageResult.urgency}</p>
+                    </div>
+                </div>
+            </div>
+
+            {triageResult.contributingFactors && triageResult.contributingFactors.length > 0 && (
+                <div>
+                    <h4 className="font-semibold mb-2">Contributing Factors:</h4>
+                    <div className="flex flex-wrap gap-2">
+                        {triageResult.contributingFactors.map((factor, i) => (
+                            <Badge key={i} variant="secondary">{factor}</Badge>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {triageResult.explanation && triageResult.explanation.length > 0 && (
+                <div>
+                    <h4 className="font-semibold mb-2">Explanation:</h4>
+                     <ul className="space-y-2">
+                        {triageResult.explanation.map((step, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                                <ArrowRightCircle className="w-4 h-4 mt-1 text-muted-foreground shrink-0"/> 
+                                <span className="text-muted-foreground">{step}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+            
+            {triageResult.suggestedNextSteps && triageResult.suggestedNextSteps.length > 0 && (
+                <div>
+                    <h4 className="font-semibold mb-2">Suggested Next Steps:</h4>
+                    <ul className="space-y-2">
+                        {triageResult.suggestedNextSteps.map((step, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                                <ArrowRightCircle className="w-4 h-4 mt-1 text-primary shrink-0"/> 
+                                <span className="text-muted-foreground">{step}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-2 pt-4">
+                <Button variant="ghost" onClick={resetForm} disabled={!isOnline}>Start Over</Button>
+                {triageResult.recommendedSpecialty && (
+                    <Button onClick={handleFindDoctor} className="flex-1" disabled={!isOnline}>
+                        Find a {triageResult.recommendedSpecialty}
+                    </Button>
+                )}
+            </div>
+        </div>
+    );
   }
 
   return (
@@ -143,11 +251,11 @@ export default function TriagePage() {
            <CardHeader>
             <CardTitle className="flex items-center gap-3 font-headline text-3xl">
                 <Sparkles className="text-accent h-8 w-8" />
-                Smart Triage & Risk Assessment
+                Smart Assistant
             </CardTitle>
             <CardDescription className='flex items-center gap-2 border-l-4 border-destructive pl-3 text-destructive'>
                 <ShieldAlert className='h-4 w-4 shrink-0' />
-                Automated triage is not medical diagnosis. Consult a licensed clinician.
+                This AI is for informational purposes and is not a substitute for professional medical advice.
             </CardDescription>
             </CardHeader>
             <CardContent>
@@ -169,10 +277,10 @@ export default function TriagePage() {
                             name="symptoms"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-base">Primary Symptoms</FormLabel>
+                                <FormLabel className="text-base">Describe your symptoms or ask a first-aid question</FormLabel>
                                 <FormControl>
                                 <Textarea
-                                    placeholder="e.g., chest pain, shortness of breath, headache"
+                                    placeholder="e.g., chest pain, shortness of breath OR how to apply a bandage"
                                     className="resize-none"
                                     rows={4}
                                     {...field}
@@ -187,7 +295,7 @@ export default function TriagePage() {
                             name="chronicFlags"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-base">Pre-existing Conditions (Optional)</FormLabel>
+                                <FormLabel className="text-base">Pre-existing Conditions (Optional, for triage)</FormLabel>
                                 <FormControl>
                                 <Input
                                     placeholder="e.g., diabetes, hypertension, asthma"
@@ -242,86 +350,23 @@ export default function TriagePage() {
                             ) : (
                                 <Sparkles className="mr-2 h-4 w-4" />
                             )}
-                            Analyze Symptoms & Risk
+                            Analyze
                         </Button>
                         </form>
                     </Form>
                     </>
                     ) : (
-                    <div className="space-y-6 pt-4">
+                    <div>
                         {!isOnline && (
                              <Alert variant="destructive" className="mb-6">
                                 <WifiOff className="h-4 w-4" />
                                 <AlertTitle>You are offline</AlertTitle>
                                 <AlertDescription>
-                                    Showing last saved triage result. Connect to the internet to run a new analysis.
+                                    Showing last saved result. Connect to the internet to run a new analysis.
                                 </AlertDescription>
                             </Alert>
                         )}
-                        <div className="text-center space-y-2">
-                            <h3 className="text-xl font-bold">AI Triage & Risk Assessment Result</h3>
-                             <div className={cn('inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-base font-bold', getRiskCategoryClass(triageResult.riskCategory))}>
-                                <HeartPulse className="h-5 w-5"/>
-                                <span>Risk Level: {triageResult.riskCategory.toUpperCase()} ({triageResult.riskScore}/100)</span>
-                            </div>
-                        </div>
-
-                        <div className="rounded-lg border bg-card p-4 grid md:grid-cols-2 gap-4">
-                            <div className="flex items-start gap-3">
-                                <Stethoscope className="w-5 h-5 mt-1 text-primary shrink-0" />
-                                <div>
-                                    <h4 className="font-semibold">Recommended Specialty</h4>
-                                    <p className="text-muted-foreground">{triageResult.recommendedSpecialty}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3">
-                                <Activity className="w-5 h-5 mt-1 text-primary shrink-0"/>
-                                <div>
-                                    <h4 className="font-semibold">Urgency Level</h4>
-                                    <p className="text-muted-foreground capitalize">{triageResult.urgency}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h4 className="font-semibold mb-2">Contributing Factors:</h4>
-                            <div className="flex flex-wrap gap-2">
-                                {triageResult.contributingFactors.map((factor, i) => (
-                                    <Badge key={i} variant="secondary">{factor}</Badge>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <h4 className="font-semibold mb-2">Explanation:</h4>
-                             <ul className="space-y-2">
-                                {triageResult.explanation.map((step, i) => (
-                                    <li key={i} className="flex items-start gap-2">
-                                        <ArrowRightCircle className="w-4 h-4 mt-1 text-muted-foreground shrink-0"/> 
-                                        <span className="text-muted-foreground">{step}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                        
-                        <div>
-                            <h4 className="font-semibold mb-2">Suggested Next Steps:</h4>
-                            <ul className="space-y-2">
-                                {triageResult.suggestedNextSteps.map((step, i) => (
-                                    <li key={i} className="flex items-start gap-2">
-                                        <ArrowRightCircle className="w-4 h-4 mt-1 text-primary shrink-0"/> 
-                                        <span className="text-muted-foreground">{step}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                            <Button variant="ghost" onClick={resetForm} disabled={!isOnline}>Start Over</Button>
-                            <Button onClick={handleFindDoctor} className="flex-1" disabled={!isOnline}>
-                                Find a {triageResult.recommendedSpecialty}
-                            </Button>
-                        </div>
+                        {renderResult()}
                     </div>
                     )}
             </CardContent>
