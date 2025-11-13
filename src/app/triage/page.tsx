@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -22,7 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Stethoscope, Sparkles, Loader2, BarChart, Activity, ArrowRightCircle, ShieldAlert, HeartPulse } from 'lucide-react';
+import { Stethoscope, Sparkles, Loader2, Activity, ArrowRightCircle, ShieldAlert, HeartPulse } from 'lucide-react';
 import { runSmartTriage } from '@/app/actions';
 import { toast } from '@/hooks/use-toast';
 import type { SmartTriageOutput } from '@/ai/flows/smart-triage-engine';
@@ -30,6 +30,9 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { WifiOff } from 'lucide-react';
+
 
 const triageFormSchema = z.object({
   symptoms: z.string().min(10, {
@@ -40,10 +43,36 @@ const triageFormSchema = z.object({
   chronicFlags: z.string().optional(),
 });
 
+const LAST_TRIAGE_RESULT_KEY = 'lastTriageResult';
+
 export default function TriagePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [triageResult, setTriageResult] = useState<SmartTriageOutput | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    // Set initial online status and listen for changes
+    const updateOnlineStatus = () => {
+      setIsOnline(navigator.onLine);
+    };
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
+
+    // Load cached result if offline
+    if (!navigator.onLine) {
+        const cachedResult = localStorage.getItem(LAST_TRIAGE_RESULT_KEY);
+        if (cachedResult) {
+            setTriageResult(JSON.parse(cachedResult));
+        }
+    }
+
+    return () => {
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
+    };
+  }, []);
 
   const form = useForm<z.infer<typeof triageFormSchema>>({
     resolver: zodResolver(triageFormSchema),
@@ -55,6 +84,14 @@ export default function TriagePage() {
   });
 
   async function onSubmit(values: z.infer<typeof triageFormSchema>) {
+    if (!isOnline) {
+        toast({
+            title: "You are offline",
+            description: "Please connect to the internet to run a new triage.",
+            variant: "destructive",
+        });
+        return;
+    }
     setIsLoading(true);
     setTriageResult(null);
     try {
@@ -64,6 +101,7 @@ export default function TriagePage() {
           chronicFlags: values.chronicFlags?.split(',').map(s => s.trim()).filter(s => s),
       });
       setTriageResult(result);
+      localStorage.setItem(LAST_TRIAGE_RESULT_KEY, JSON.stringify(result)); // Cache result
     } catch (error) {
       toast({
         title: "Triage Failed",
@@ -85,6 +123,7 @@ export default function TriagePage() {
   const resetForm = () => {
     form.reset();
     setTriageResult(null);
+    localStorage.removeItem(LAST_TRIAGE_RESULT_KEY);
   }
   
   const getRiskCategoryClass = (category: 'low' | 'medium' | 'high') => {
@@ -113,6 +152,16 @@ export default function TriagePage() {
             </CardHeader>
             <CardContent>
                  {!triageResult ? (
+                    <>
+                    {!isOnline && (
+                         <Alert variant="destructive" className="mb-6">
+                            <WifiOff className="h-4 w-4" />
+                            <AlertTitle>You are currently offline</AlertTitle>
+                            <AlertDescription>
+                                You can't run a new analysis, but you can view your last result if available.
+                            </AlertDescription>
+                        </Alert>
+                    )}
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <FormField
@@ -187,7 +236,7 @@ export default function TriagePage() {
                             />
                         </div>
                         
-                        <Button type="submit" disabled={isLoading} className="w-full" size="lg">
+                        <Button type="submit" disabled={isLoading || !isOnline} className="w-full" size="lg">
                             {isLoading ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
@@ -197,8 +246,18 @@ export default function TriagePage() {
                         </Button>
                         </form>
                     </Form>
+                    </>
                     ) : (
                     <div className="space-y-6 pt-4">
+                        {!isOnline && (
+                             <Alert variant="destructive" className="mb-6">
+                                <WifiOff className="h-4 w-4" />
+                                <AlertTitle>You are offline</AlertTitle>
+                                <AlertDescription>
+                                    Showing last saved triage result. Connect to the internet to run a new analysis.
+                                </AlertDescription>
+                            </Alert>
+                        )}
                         <div className="text-center space-y-2">
                             <h3 className="text-xl font-bold">AI Triage & Risk Assessment Result</h3>
                              <div className={cn('inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-base font-bold', getRiskCategoryClass(triageResult.riskCategory))}>
@@ -258,8 +317,8 @@ export default function TriagePage() {
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                            <Button variant="ghost" onClick={resetForm}>Start Over</Button>
-                            <Button onClick={handleFindDoctor} className="flex-1">
+                            <Button variant="ghost" onClick={resetForm} disabled={!isOnline}>Start Over</Button>
+                            <Button onClick={handleFindDoctor} className="flex-1" disabled={!isOnline}>
                                 Find a {triageResult.recommendedSpecialty}
                             </Button>
                         </div>
