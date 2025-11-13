@@ -1,3 +1,88 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-image-1",
+      "description": "A compassionate doctor listening to a patient in a bright, modern clinic.",
+      "imageUrl": "https://images.unsplash.com/photo-1638202993928-7267aad84c31?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxkb2N0b3IlMjBwYXRpZW50fGVufDB8fHx8MTc2MzA1NDczOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "doctor patient"
+    },
+    {
+      "id": "doc-1",
+      "description": "Portrait of Dr. Evelyn Reed, a cardiologist.",
+      "imageUrl": "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxmZW1hbGUlMjBkb2N0b3J8ZW58MHx8fHwxNzYzMDQwNTgyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "female doctor"
+    },
+    {
+      "id": "doc-2",
+      "description": "Portrait of Dr. Marcus Thorne, a neurologist.",
+      "imageUrl": "https://images.unsplash.com/photo-1712215544003-af10130f8eb3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtYWxlJTIwZG9jdG9yfGVufDB8fHx8MTc2Mjk2OTc3NHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "male doctor"
+    },
+    {
+      "id": "doc-3",
+      "description": "Portrait of Dr. Elena Cruz, a pediatrician.",
+      "imageUrl": "https://images.unsplash.com/photo-1734002886107-168181bcd6a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxmZW1hbGUlMjBkb2N0b3IlMjBzbWlsaW5nfGVufDB8fHx8MTc2MzA1NTQ4Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "female doctor smiling"
+    },
+    {
+      "id": "doc-4",
+      "description": "Portrait of Dr. Julian Bennett, a dermatologist.",
+      "imageUrl": "https://images.unsplash.com/photo-1550831107-1553da8c8464?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxkb2N0b3IlMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjMwMjkxMTZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "doctor portrait"
+    },
+    {
+      "id": "doc-5",
+      "description": "Portrait of Dr. Anya Sharma, an endocrinologist.",
+      "imageUrl": "https://images.unsplash.com/photo-1758691463607-c1220b77aaaa?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxkb2N0b3IlMjBwcm9mZXNzaW9uYWx8ZW58MHx8fHwxNzYzMDUzNjk2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "doctor professional"
+    },
+    {
+      "id": "doc-6",
+      "description": "Portrait of Dr. Ben Carter, a gastroenterologist.",
+      "imageUrl": "https://images.unsplash.com/photo-1548101307-a757d5f06d27?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtYWxlJTIwZG9jdG9yJTIwc21pbGluZ3xlbnwwfHx8fDE3NjMwNTU0ODJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "male doctor smiling"
+    },
+    {
+      "id": "doc-7",
+      "description": "Portrait of Dr. Olivia Hayes, an oncologist.",
+      "imageUrl": "https://images.unsplash.com/photo-1659353888323-1f5c85ea3952?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxkb2N0b3IlMjBzZXJpb3VzfGVufDB8fHx8MTc2MzA1NTQ4Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "doctor serious"
+    },
+    {
+      "id": "doc-8",
+      "description": "Portrait of Dr. Samuel Chen, an ophthalmologist.",
+      "imageUrl": "https://images.unsplash.com/photo-1580281845022-233f93de0671?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxhc2lhbiUyMGRvY3RvcnxlbnwwfHx8fDE3NjMwNTU0ODJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "asian doctor"
+    },
+    {
+      "id": "doc-9",
+      "description": "Portrait of Dr. Chloe Webb, a rheumatologist.",
+      "imageUrl": "https://images.unsplash.com/photo-1659353889416-fab1265eaa7f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxkb2N0b3IlMjBmcmllbmRseXxlbnwwfHx8fDE3NjI5NzAzOTd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "doctor friendly"
+    },
+    {
+      "id": "doc-10",
+      "description": "Portrait of Dr. Leo Maxwell, a urologist.",
+      "imageUrl": "https://images.unsplash.com/photo-1622475439808-de6910b36f1e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxkb2N0b3IlMjBnbGFzc2VzfGVufDB8fHx8MTc2MzA1NTQ4Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "doctor glasses"
+    },
+    {
+      "id": "er-1",
+      "description": "Exterior of City General Hospital Emergency Room.",
+      "imageUrl": "https://images.unsplash.com/photo-1582586730050-7f2ab868926c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxob3NwaXRhbCUyMGJ1aWxkaW5nfGVufDB8fHx8MTc2Mjk2ODg5MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "hospital building"
+    },
+    {
+      "id": "er-2",
+      "description": "Exterior of MetroHealth Emergency Center.",
+      "imageUrl": "https://images.unsplash.com/photo-1719934398679-d764c1410770?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBob3NwaXRhbHxlbnwwfHx8fDE3NjMwMjczODN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "modern hospital"
+    },
+    {
+      "id": "er-3",
+      "description": "Exterior of Riverside Community Hospital ER.",
+      "imageUrl": "https://images.unsplash.com/photo-1761479336505-e397563d3b64?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxob3NwaXRhbCUyMG5pZ2h0fGVufDB8fHx8MTc2MzA1NTQ4Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "hospital night"
+    }
+  ]
 }
