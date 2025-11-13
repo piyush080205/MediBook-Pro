@@ -2,101 +2,98 @@
  * @fileoverview Firestore Security Rules for MediBook Pro.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user-specific data (e.g., appointments),
- * allows public read access to doctor and clinic information, and restricts write access to specific roles or owners.
+ * This ruleset enforces a strict user-ownership model for user profiles and appointments,
+ * while allowing public read access to doctor and clinic information. Write access to
+ * certain collections (triage logs, slot optimization logs, queue history) is restricted
+ * to the application backend to ensure data integrity and prevent unauthorized modifications.
  *
  * Data Structure:
- * - Users: `/users/{userId}` (owner-only access)
- * - Doctors: `/doctors/{doctorId}` (public read, owner-only write - TODO: needs ownership field)
- * - Clinics: `/clinics/{clinicId}` (public read, owner-only write - TODO: needs ownership field)
- * - Appointments: `/users/{userId}/appointments/{appointmentId}` (owner-only access to appointments nested under the user)
- * - Triage Logs: `/triage_logs/{triageLogId}` (open writes for fast prototyping)
- * - Slot Optimization Logs: `/slot_optimization_logs/{slotOptimizationLogId}` (open writes for fast prototyping)
- * - Queue History: `/queue_history/{queueHistoryId}` (open writes for fast prototyping)
- * - OtpCache: `/otp_cache/{phone}` (owner-only write)
+ * - /users/{userId}: Stores user profiles, accessible only to the user themselves.
+ * - /doctors/{doctorId}: Stores doctor profiles, publicly readable but write-protected.
+ * - /clinics/{clinicId}: Stores clinic information, publicly readable but write-protected.
+ * - /users/{userId}/appointments/{appointmentId}: Stores appointment bookings, accessible only to the owning user.
+ * - /triage_logs/{triageLogId}: Stores triage logs, write-protected.
+ * - /slot_optimization_logs/{slotOptimizationLogId}: Stores slot optimization logs, write-protected.
+ * - /queue_history/{queueHistoryId}: Stores queue history, write-protected.
  *
  * Key Security Decisions:
- * - Users can only access their own data under `/users/{userId}`.
- * - Listing of users is disallowed.
- * - Doctor and Clinic information is publicly readable. Write access is currently open, but should be restricted to authorized roles or owners in production.
- * - OtpCache are phone number owned
+ * - User listing is disallowed to protect user privacy.
+ * - Doctor and clinic information is publicly readable to facilitate discovery.
+ * - Write access to triage, slot optimization, and queue history logs is restricted to the backend.
+ * - All destructive operations (update, delete) require verifying the document's existence.
  *
  * Denormalization for Authorization:
- * This ruleset avoids `get()` calls by assuming that necessary authorization data (e.g., user IDs)
- * is either present in the `request.auth` context or denormalized directly onto the documents being secured.
- *
- * Structural Segregation:
- * Private user data (appointments) is stored in user subcollections, while public data (doctors, clinics) is stored in top-level collections.
+ * - The `Appointment` entity denormalizes the `userId` to allow direct rule-based access control.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profile information. Only the user can read and write their own profile.
+     * @description Secure access to user profiles, allowing only the user themselves to read and write their own data.
      * @path /users/{userId}
-     * @allow (create) - User with UID 'user123' can create their own profile document.
-     * @deny (create) - User with UID 'user456' cannot create a profile document with ID 'user123'.
-     * @allow (get, list) - User with UID 'user123' can read their profile document.
-     * @deny (get, list) - User with UID 'user456' cannot read the profile document of 'user123'.
-     * @allow (update, delete) - User with UID 'user123' can update or delete their own profile document.
-     * @deny (update, delete) - User with UID 'user456' cannot update or delete the profile document of 'user123'.
-     * @principle Enforces document ownership for writes.
+     * @allow (create) - User with ID 'user123' can create their profile if authenticated as 'user123'.
+     * @allow (get, update, delete) - User with ID 'user123' can read, update, and delete their profile if authenticated as 'user123'.
+     * @deny (create, get, update, delete) - User with ID 'user456' cannot access user profile 'user123'.
+     * @principle Enforces strict user ownership for profile data.
      */
     match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
       allow get: if isOwner(userId);
-      allow list: if false;
+      allow list: if false; // User listing is disallowed for privacy.
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to doctor profile information.  Anyone can read doctor profiles.
-     *              Write access is open for prototyping, but should be restricted to authorized roles in production.
+     * @description Allows public read access to doctor profiles, but restricts write access.
      * @path /doctors/{doctorId}
      * @allow (get, list) - Any user can read doctor profiles.
-     * @allow (create) - Any signed-in user can create a doctor profile.
-     * @allow (update) - Any signed-in user can update a doctor profile.
-     * @allow (delete) - Any signed-in user can delete a doctor profile.
-     * @deny   (create, update, delete) - Unauthenticated users are denied all write access.
-     * @principle Public read access with owner-only writes (TODO: Implement owner-only writes once ownership field is added to schema).
+     * @deny (create, update, delete) - No user can create, update, or delete doctor profiles through the client.
+     * @principle Public read access with restricted write access for doctor data.
      */
     match /doctors/{doctorId} {
       allow get, list: if true;
-      // TODO: Add owner validation once the schema is updated with an ownership field.
       allow create, update, delete: if false;
     }
 
     /**
-     * @description Controls access to clinic information. Anyone can read clinic information.
-     *              Write access is open for prototyping, but should be restricted to authorized roles in production.
+     * @description Allows public read access to clinic information, but restricts write access.
      * @path /clinics/{clinicId}
      * @allow (get, list) - Any user can read clinic information.
-     * @allow (create) - Any signed-in user can create clinic information.
-     * @allow (update) - Any signed-in user can update clinic information.
-     * @allow (delete) - Any signed-in user can delete clinic information.
-     * @deny   (create, update, delete) - Unauthenticated users are denied all write access.
-     * @principle Public read access with owner-only writes (TODO: Implement owner-only writes once ownership field is added to schema).
+     * @deny (create, update, delete) - No user can create, update, or delete clinic information through the client.
+     * @principle Public read access with restricted write access for clinic data.
      */
     match /clinics/{clinicId} {
       allow get, list: if true;
-      // TODO: Add owner validation once the schema is updated with an ownership field.
       allow create, update, delete: if false;
     }
 
     /**
-     * @description Controls access to appointment information for a specific user. Only the user can manage their own appointments.
+     * @description Secure access to appointments, allowing only the owning user to manage their appointments.
      * @path /users/{userId}/appointments/{appointmentId}
-     * @allow (create) - User with UID 'user123' can create an appointment document under their user profile.
-     * @deny (create) - User with UID 'user456' cannot create an appointment document under 'user123'.
-     * @allow (get, list) - User with UID 'user123' can read their appointment documents.
-     * @deny (get, list) - User with UID 'user456' cannot read the appointment documents of 'user123'.
-     * @allow (update, delete) - User with UID 'user123' can update or delete their own appointment documents.
-     * @deny (update, delete) - User with UID 'user456' cannot update or delete the appointment documents of 'user123'.
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) - User with ID 'user123' can create an appointment under their user ID.
+     * @allow (get, update, delete) - User with ID 'user123' can read, update, and delete their appointments.
+     * @deny (create, get, update, delete) - User with ID 'user456' cannot access appointments under user ID 'user123'.
+     * @principle Enforces user ownership for appointment management.
      */
     match /users/{userId}/appointments/{appointmentId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+       function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
       allow create: if isOwner(userId) && request.resource.data.patientId == userId;
@@ -105,64 +102,39 @@ service cloud.firestore {
     }
 
     /**
-     * @description Controls access to triage log entries. Write access is completely open for fast prototyping.
+     * @description Restricts write access to triage logs, allowing only read access.
      * @path /triage_logs/{triageLogId}
-     * @allow get, list, create, update, delete: if true;
-     * @principle Open writes for prototyping.
+     * @allow (get, list) - Any user can read triage logs.
+     * @deny (create, update, delete) - No user can create, update, or delete triage logs.
+     * @principle Backend-only write access for triage logs.
      */
     match /triage_logs/{triageLogId} {
-      allow get, list, create, update, delete: if true;
+      allow get, list: if true;
+      allow create, update, delete: if false;
     }
 
     /**
-     * @description Controls access to slot optimization log entries. Write access is completely open for fast prototyping.
+     * @description Restricts write access to slot optimization logs, allowing only read access.
      * @path /slot_optimization_logs/{slotOptimizationLogId}
-     * @allow get, list, create, update, delete: if true;
-     * @principle Open writes for prototyping.
+     * @allow (get, list) - Any user can read slot optimization logs.
+     * @deny (create, update, delete) - No user can create, update, or delete slot optimization logs.
+     * @principle Backend-only write access for slot optimization logs.
      */
     match /slot_optimization_logs/{slotOptimizationLogId} {
-      allow get, list, create, update, delete: if true;
+      allow get, list: if true;
+      allow create, update, delete: if false;
     }
 
     /**
-     * @description Controls access to queue history entries. Write access is completely open for fast prototyping.
+     * @description Restricts write access to queue history, allowing only read access.
      * @path /queue_history/{queueHistoryId}
-     * @allow get, list, create, update, delete: if true;
-     * @principle Open writes for prototyping.
+     * @allow (get, list) - Any user can read queue history.
+     * @deny (create, update, delete) - No user can create, update, or delete queue history entries.
+     * @principle Backend-only write access for queue history data.
      */
     match /queue_history/{queueHistoryId} {
-      allow get, list, create, update, delete: if true;
+      allow get, list: if true;
+      allow create, update, delete: if false;
     }
-
-    /**
-     * @description Controls access to OTP cache entries. OTPs are phone number owned.
-     * @path /otp_cache/{phone}
-     * @allow get: if false;
-     * @allow list: if false;
-     * @allow create: if isSignedIn() && request.resource.data.phone == phone;
-     * @allow update: if false;
-     * @allow delete: if false;
-     * @principle Phone number ownership for OTP creation.
-     */
-    match /otp_cache/{phone} {
-       allow get: if false;
-       allow list: if false;
-       allow create: if isSignedIn() && request.resource.data.phone == phone;
-       allow update: if false;
-       allow delete: if false;
-    }
-  }
-
-  // Helper Functions
-  function isSignedIn() {
-    return request.auth != null;
-  }
-
-  function isOwner(userId) {
-    return request.auth.uid == userId;
-  }
-
-  function isExistingOwner(userId) {
-    return isOwner(userId) && resource != null;
   }
 }

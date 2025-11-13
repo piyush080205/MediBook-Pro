@@ -57,7 +57,7 @@
         },
         "specialties": {
           "type": "array",
-          "description": "An array of medical specialties the doctor practices.",
+          "description": "An array of medical specialties the doctor practices in.",
           "items": {
             "type": "string"
           }
@@ -72,11 +72,11 @@
         },
         "ratingsAvg": {
           "type": "number",
-          "description": "The average rating given to the doctor."
+          "description": "The average rating for the doctor."
         },
         "ratingsCount": {
           "type": "number",
-          "description": "The total number of ratings received by the doctor."
+          "description": "The number of ratings the doctor has received."
         },
         "fees": {
           "type": "number",
@@ -91,15 +91,15 @@
         },
         "locationLat": {
           "type": "number",
-          "description": "The doctors's location latitude"
+          "description": "The latitude of the doctor's location."
         },
         "locationLng": {
           "type": "number",
-          "description": "The doctors's location longitude"
+          "description": "The longitude of the doctor's location."
         },
         "address": {
           "type": "string",
-          "description": "The doctor's office address."
+          "description": "The doctor's address."
         }
       },
       "required": [
@@ -128,15 +128,15 @@
         },
         "name": {
           "type": "string",
-          "description": "The name of the clinic."
+          "description": "The clinic's name."
         },
         "locationLat": {
           "type": "number",
-          "description": "The clinics's location latitude"
+          "description": "The latitude of the clinic's location."
         },
         "locationLng": {
           "type": "number",
-          "description": "The clinics's location longitude"
+          "description": "The longitude of the clinic's location."
         },
         "address": {
           "type": "string",
@@ -148,7 +148,7 @@
         },
         "schedule": {
           "type": "array",
-          "description": "The clinic's operating schedule (array of objects with dayOfWeek, start, and end times).",
+          "description": "The clinic's operating schedule.",
           "items": {
             "type": "string"
           }
@@ -230,11 +230,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the TriageLog entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N TriageLog). Nullable, as triage might be performed without a logged-in user."
+          "description": "Unique identifier for the TriageLog entry."
         },
         "timestamp": {
           "type": "string",
@@ -243,7 +239,7 @@
         },
         "symptoms": {
           "type": "array",
-          "description": "An array of symptoms reported by the user.",
+          "description": "The symptoms reported by the user.",
           "items": {
             "type": "string"
           }
@@ -262,15 +258,15 @@
         },
         "urgency": {
           "type": "string",
-          "description": "The urgency level determined by the triage engine."
+          "description": "The urgency level determined by the triage engine (e.g., 'low', 'medium', 'high')."
         },
         "confidence": {
           "type": "number",
-          "description": "The confidence level of the triage engine's recommendation."
+          "description": "The confidence level of the triage engine's recommendation (0-1)."
         },
         "suggestedNextSteps": {
           "type": "array",
-          "description": "An array of suggested next steps for the user.",
+          "description": "Suggested next steps for the user based on the triage assessment.",
           "items": {
             "type": "string"
           }
@@ -290,44 +286,44 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "SlotOptimizationLog",
       "type": "object",
-      "description": "Represents a log entry for slot optimization.",
+      "description": "Represents a log entry for slot optimization attempts.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the SlotOptimizationLog entity."
-        },
-        "doctorId": {
-          "type": "string",
-          "description": "Reference to Doctor. (Relationship: Doctor 1:N SlotOptimizationLog)"
+          "description": "Unique identifier for the SlotOptimizationLog entry."
         },
         "timestamp": {
           "type": "string",
           "description": "The timestamp when the slot optimization was performed.",
           "format": "date-time"
         },
+        "doctorId": {
+          "type": "string",
+          "description": "Reference to Doctor. The doctor ID for which the slot optimization was performed."
+        },
         "dateRangeFrom": {
           "type": "string",
-          "description": "The start of the date range for slot optimization.",
+          "description": "The start date of the date range for slot optimization.",
           "format": "date-time"
         },
         "dateRangeTo": {
           "type": "string",
-          "description": "The end of the date range for slot optimization.",
+          "description": "The end date of the date range for slot optimization.",
           "format": "date-time"
         },
         "patientPreferencesEarliestTime": {
           "type": "string",
-          "description": "The patient's earliest preferred time for the appointment (optional).",
+          "description": "The earliest time the patient is available (optional).",
           "format": "date-time"
         },
         "patientPreferencesLatestTime": {
           "type": "string",
-          "description": "The patient's latest preferred time for the appointment (optional).",
+          "description": "The latest time the patient is available (optional).",
           "format": "date-time"
         },
         "bestSlots": {
           "type": "array",
-          "description": "An array of the best slots recommended by the optimizer.",
+          "description": "The optimized slot suggestions.",
           "items": {
             "type": "string"
           }
@@ -335,8 +331,8 @@
       },
       "required": [
         "id",
-        "doctorId",
         "timestamp",
+        "doctorId",
         "dateRangeFrom",
         "dateRangeTo",
         "bestSlots"
@@ -346,20 +342,20 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "QueueHistory",
       "type": "object",
-      "description": "Represents a historical record of clinic queue data.",
+      "description": "Represents a historical entry of clinic queue data.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the QueueHistory entity."
-        },
-        "clinicId": {
-          "type": "string",
-          "description": "Reference to Clinic. (Relationship: Clinic 1:N QueueHistory)"
+          "description": "Unique identifier for the QueueHistory entry."
         },
         "timestamp": {
           "type": "string",
-          "description": "The timestamp of the queue data record.",
+          "description": "The timestamp when the queue data was recorded.",
           "format": "date-time"
+        },
+        "clinicId": {
+          "type": "string",
+          "description": "Reference to Clinic. The clinic ID for which the queue data is recorded."
         },
         "patientsAhead": {
           "type": "number",
@@ -372,36 +368,10 @@
       },
       "required": [
         "id",
-        "clinicId",
         "timestamp",
+        "clinicId",
         "patientsAhead",
         "estimatedWaitMinutes"
-      ]
-    },
-    "OtpCache": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "OtpCache",
-      "type": "object",
-      "description": "Represents a short-lived OTP record for phone verification.",
-      "properties": {
-        "phone": {
-          "type": "string",
-          "description": "The phone number associated with the OTP."
-        },
-        "otp": {
-          "type": "string",
-          "description": "The one-time password."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "The timestamp when the OTP was generated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "phone",
-        "otp",
-        "createdAt"
       ]
     }
   },
@@ -420,11 +390,11 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profile information. The 'userId' parameter identifies the user.",
+          "description": "Stores user profiles. The 'userId' parameter is the unique identifier for the user. It is also used for path-based authorization.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user."
+              "description": "The unique identifier of the user."
             }
           ]
         }
@@ -436,11 +406,11 @@
           "schema": {
             "$ref": "#/backend/entities/Doctor"
           },
-          "description": "Stores doctor profile information. The 'doctorId' parameter identifies the doctor.",
+          "description": "Stores doctor profiles. Accessible for reading by all users, but write access is restricted to admin roles.",
           "params": [
             {
               "name": "doctorId",
-              "description": "The unique identifier for the doctor."
+              "description": "The unique identifier of the doctor."
             }
           ]
         }
@@ -452,11 +422,11 @@
           "schema": {
             "$ref": "#/backend/entities/Clinic"
           },
-          "description": "Stores clinic information. The 'clinicId' parameter identifies the clinic.",
+          "description": "Stores clinic information. Accessible for reading by all users, but write access is restricted to admin roles.",
           "params": [
             {
               "name": "clinicId",
-              "description": "The unique identifier for the clinic."
+              "description": "The unique identifier of the clinic."
             }
           ]
         }
@@ -468,15 +438,15 @@
           "schema": {
             "$ref": "#/backend/entities/Appointment"
           },
-          "description": "Stores appointment information for a specific user. The 'userId' parameter identifies the user, and the 'appointmentId' parameter identifies the appointment.",
+          "description": "Stores appointment bookings for a specific user. The 'userId' is denormalized into the appointment document to allow rules to validate the ownership of each `Appointment`",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user."
+              "description": "The unique identifier of the user (patient)."
             },
             {
               "name": "appointmentId",
-              "description": "The unique identifier for the appointment."
+              "description": "The unique identifier of the appointment."
             }
           ]
         }
@@ -488,11 +458,11 @@
           "schema": {
             "$ref": "#/backend/entities/TriageLog"
           },
-          "description": "Stores triage log entries. The 'triageLogId' parameter identifies the triage log entry.",
+          "description": "Stores triage log entries. Write access restricted to the application backend.",
           "params": [
             {
               "name": "triageLogId",
-              "description": "The unique identifier for the triage log entry."
+              "description": "The unique identifier of the triage log entry."
             }
           ]
         }
@@ -504,11 +474,11 @@
           "schema": {
             "$ref": "#/backend/entities/SlotOptimizationLog"
           },
-          "description": "Stores slot optimization log entries. The 'slotOptimizationLogId' parameter identifies the slot optimization log entry.",
+          "description": "Stores slot optimization log entries. Write access restricted to the application backend.",
           "params": [
             {
               "name": "slotOptimizationLogId",
-              "description": "The unique identifier for the slot optimization log entry."
+              "description": "The unique identifier of the slot optimization log entry."
             }
           ]
         }
@@ -520,32 +490,16 @@
           "schema": {
             "$ref": "#/backend/entities/QueueHistory"
           },
-          "description": "Stores queue history entries. The 'queueHistoryId' parameter identifies the queue history entry.",
+          "description": "Stores queue history entries for clinics. Write access restricted to the application backend.",
           "params": [
             {
               "name": "queueHistoryId",
-              "description": "The unique identifier for the queue history entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/otp_cache/{phone}",
-        "definition": {
-          "entityName": "OtpCache",
-          "schema": {
-            "$ref": "#/backend/entities/OtpCache"
-          },
-          "description": "Stores OTP (One-Time Password) entries for phone verification. The 'phone' parameter identifies the phone number associated with the OTP. This collection's purpose is for storing short-lived OTPs and should be handled with appropriate security considerations and TTL (Time-To-Live).",
-          "params": [
-            {
-              "name": "phone",
-              "description": "The phone number associated with the OTP."
+              "description": "The unique identifier of the queue history entry."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the MediBook Pro application's features, emphasizing security, scalability, and ease of debugging.  The structure uses path-based ownership for private user data and membership maps for collaborative data.  Authorization Independence is achieved through denormalization, avoiding `get()` calls in security rules. Structural Segregation ensures collections contain documents with homogeneous security needs. This architecture supports secure `list` operations (QAPs).  Specifically, user-owned data like appointments are nested under the `/users/{userId}` path, ensuring that only the user can access their data. Doctor and Clinic information is stored in top-level collections for easy querying. Triage logs are stored under the `/triage_logs` collection without user association to accommodate triage assessment without logged-in user. OtpCache will be stored in `/otp_cache` collection."
+    "reasoning": "The Firestore data structure is designed to support the MediBook Pro application's features, including smart triage, doctor search, appointment booking, queue prediction, and emergency routing. The structure emphasizes authorization independence and clear security rules by denormalizing authorization data and segregating data based on access requirements.\n\nAuthorization Independence is achieved by storing the `User.id` on the `Appointment` documents, facilitating direct access control based on the currently logged in user.\n\nQAPs (Rules Are Not Filters) is supported through structural segregation. User-specific data (appointments) is stored under the `/users/{userId}` path, enabling secure list operations based on path-based ownership. Doctor and Clinic data, while globally accessible for reading, are managed via backend processes and do not require filtering on the client side. Global roles (e.g. admin) are not explicitly modeled in this structure as they are out of scope."
   }
 }
