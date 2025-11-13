@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,16 +11,48 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Phone, Map, BedDouble, Wind, Loader2 } from 'lucide-react';
-import { emergencyRooms } from '@/lib/data';
+import { emergencyRooms as allEmergencyRooms } from '@/lib/data';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import MapView from './Map';
 import type { EmergencyRoom } from '@/lib/types';
 import { useGeolocation } from '@/hooks/use-geolocation';
 
+// Function to calculate distance between two lat/lng points in km
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371; // Radius of the earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    const d = R * c; // Distance in km
+    return d;
+}
+
+
 export default function EmergencyFeature() {
-    const [selectedER, setSelectedER] = useState<EmergencyRoom | null>(emergencyRooms[0] || null);
     const { coordinates, isLoading: isLocationLoading, error: locationError } = useGeolocation();
+    
+    const sortedEmergencyRooms = useMemo(() => {
+        if (!coordinates) {
+            return allEmergencyRooms;
+        }
+
+        return [...allEmergencyRooms]
+            .map(er => {
+                const distance = getDistance(coordinates.lat, coordinates.lng, er.location.lat, er.location.lng);
+                // Assume average speed of 40km/h to calculate ETA
+                const eta = Math.round((distance / 40) * 60); 
+                return { ...er, distance, etaDrivingMinutes: eta };
+            })
+            .sort((a, b) => a.distance - b.distance);
+    }, [coordinates]);
+    
+    const [selectedER, setSelectedER] = useState<EmergencyRoom | null>(sortedEmergencyRooms[0] || null);
+
 
     return (
         <Dialog>
@@ -60,7 +92,7 @@ export default function EmergencyFeature() {
                     )}
                     {coordinates && (
                          <MapView 
-                            locations={emergencyRooms} 
+                            locations={sortedEmergencyRooms} 
                             onSelectER={setSelectedER} 
                             selectedER={selectedER}
                             userLocation={coordinates}
@@ -68,7 +100,7 @@ export default function EmergencyFeature() {
                     )}
                      {!coordinates && !isLocationLoading && !locationError && (
                          <MapView 
-                            locations={emergencyRooms} 
+                            locations={sortedEmergencyRooms} 
                             onSelectER={setSelectedER} 
                             selectedER={selectedER}
                         />
@@ -76,7 +108,7 @@ export default function EmergencyFeature() {
                 </div>
                 <div className="flex flex-col gap-4 overflow-y-auto pr-2">
                     <h3 className="font-bold text-lg">Hospitals List</h3>
-                    {emergencyRooms.map(er => {
+                    {sortedEmergencyRooms.map(er => {
                         const erImage = PlaceHolderImages.find(p => p.id === er.imageId);
                         const isSelected = selectedER?.id === er.id;
                         return (
