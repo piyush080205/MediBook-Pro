@@ -34,8 +34,8 @@ MediBook Pro is an intelligent, AI-powered healthcare platform designed to strea
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
-cd <repository-name>
+git clone https://github.com/piyush080205/MediBook-Pro.git
+cd MediBook Pro
 ```
 
 ### 2. Install Dependencies
