@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Phone, Map, BedDouble, Wind, Loader2 } from 'lucide-react';
+import { AlertTriangle, Phone, BedDouble, Wind, Loader2 } from 'lucide-react';
 import { emergencyRooms as allEmergencyRooms } from '@/lib/data';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -21,6 +21,9 @@ import { useGeolocation } from '@/hooks/use-geolocation';
 
 // Function to calculate distance between two lat/lng points in km
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+    if ((lat1 === lat2) && (lon1 === lon2)) {
+        return 0;
+    }
     const R = 6371; // Radius of the earth in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -33,13 +36,16 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     return d;
 }
 
+type EmergencyRoomWithDistance = EmergencyRoom & { distance?: number };
 
 export default function EmergencyFeature() {
     const { coordinates, isLoading: isLocationLoading, error: locationError } = useGeolocation();
-    
+    const [selectedER, setSelectedER] = useState<EmergencyRoomWithDistance | null>(null);
+
     const sortedEmergencyRooms = useMemo(() => {
         if (!coordinates) {
-            return allEmergencyRooms;
+            // Return original list with ETA if no location
+            return allEmergencyRooms.map(er => ({...er}));
         }
 
         return [...allEmergencyRooms]
@@ -52,14 +58,12 @@ export default function EmergencyFeature() {
             .sort((a, b) => a.distance - b.distance);
     }, [coordinates]);
     
-    const [selectedER, setSelectedER] = useState<EmergencyRoom | null>(null);
-
-    // Set the initially selected ER to the closest one once data is sorted
-    useMemo(() => {
-        if (sortedEmergencyRooms.length > 0) {
+    // Effect to select the closest ER once the list is sorted
+    useEffect(() => {
+        if (sortedEmergencyRooms.length > 0 && !selectedER) {
             setSelectedER(sortedEmergencyRooms[0]);
         }
-    }, [sortedEmergencyRooms]);
+    }, [sortedEmergencyRooms, selectedER]);
 
 
     return (
@@ -98,21 +102,13 @@ export default function EmergencyFeature() {
                             <p className="text-sm text-muted-foreground">{locationError}. Please enable location services in your browser.</p>
                         </div>
                     )}
-                    {coordinates && (
-                         <MapView 
-                            locations={sortedEmergencyRooms} 
-                            onSelectER={setSelectedER} 
-                            selectedER={selectedER}
-                            userLocation={coordinates}
-                        />
-                    )}
-                     {!coordinates && !isLocationLoading && !locationError && (
-                         <MapView 
-                            locations={sortedEmergencyRooms} 
-                            onSelectER={setSelectedER} 
-                            selectedER={selectedER}
-                        />
-                    )}
+                    
+                    <MapView 
+                        locations={sortedEmergencyRooms} 
+                        onSelectER={setSelectedER} 
+                        selectedER={selectedER}
+                        userLocation={coordinates}
+                    />
                 </div>
                 <div className="flex flex-col gap-4 overflow-y-auto pr-2">
                     <h3 className="font-bold text-lg">Hospitals List</h3>
@@ -134,10 +130,12 @@ export default function EmergencyFeature() {
                             <h3 className="font-bold text-sm">{er.name}</h3>
                             <p className="text-xs text-muted-foreground line-clamp-2">{er.location.address}</p>
                             <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2 text-xs">
-                                <div className="flex items-center gap-1.5" title="Estimated Time of Arrival">
-                                    <Wind className="h-3 w-3 text-blue-500" />
-                                    <span>~{er.etaDrivingMinutes} min</span>
-                                </div>
+                                {er.distance !== undefined && (
+                                     <div className="flex items-center gap-1.5" title="Distance">
+                                        <Wind className="h-3 w-3 text-blue-500" />
+                                        <span>~{er.distance.toFixed(1)} km</span>
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-1.5" title="Available Beds (simulated)">
                                     <BedDouble className="h-3 w-3 text-green-500" />
                                     <span>{er.bedsAvailable} beds</span>
