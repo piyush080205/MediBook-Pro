@@ -18,6 +18,7 @@ import type { OptimizeSlotsOutput } from "@/ai/flows/slot-optimization-engine";
 import { getDoctorById } from "@/lib/data";
 import BookingConfirmation from "./BookingConfirmation";
 import type { Doctor } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
 
 export default function SlotOptimizerModal({ doctorId }: { doctorId: string }) {
   const [open, setOpen] = useState(false);
