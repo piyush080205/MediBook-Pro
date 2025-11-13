@@ -10,12 +10,12 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const ClinicStatsInputSchema = z.object({
+const ClinicStatsInputSchema = z.object({
   clinicId: z.string().describe('The ID of the clinic for which to generate stats.'),
 });
 export type ClinicStatsInput = z.infer<typeof ClinicStatsInputSchema>;
 
-export const ClinicStatsOutputSchema = z.object({
+const ClinicStatsOutputSchema = z.object({
   queueLength: z.number().describe('The current number of patients in the queue.'),
   predictedWaitMins: z.number().describe('The predicted average wait time in minutes.'),
   doctorAvailability: z.number().min(0).max(1).describe('The percentage of doctors currently available (0 to 1).'),
