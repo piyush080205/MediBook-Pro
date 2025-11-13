@@ -8,8 +8,8 @@ import { Calendar, Clock, MapPin } from "lucide-react";
 const upcomingAppointments = [
   {
     id: 'appt-1',
-    doctor: { name: 'Dr. Evelyn Reed', specialty: 'Cardiology', imageId: 'doc-1' },
-    clinic: { name: 'Downtown Medical Center', address: '123 Main St, New York, NY' },
+    doctor: { name: 'Dr. Priya Sharma', specialty: 'Cardiology', imageId: 'doc-1' },
+    clinic: { name: 'Mumbai Central Medical Center', address: '123 MG Road, Mumbai, Maharashtra' },
     date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
     time: '10:30 AM',
   },
@@ -18,16 +18,16 @@ const upcomingAppointments = [
 const pastAppointments = [
     {
     id: 'appt-2',
-    doctor: { name: 'Dr. Julian Bennett', specialty: 'Dermatology', imageId: 'doc-4' },
-    clinic: { name: 'Queens General Practice', address: '101 Queens Blvd, Queens, NY' },
+    doctor: { name: 'Dr. Vikram Singh', specialty: 'Dermatology', imageId: 'doc-4' },
+    clinic: { name: 'Chennai General Practice', address: '101 Anna Salai, Chennai, Tamil Nadu' },
     date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 2 weeks ago
     time: '02:00 PM',
     status: 'completed',
   },
   {
     id: 'appt-3',
-    doctor: { name: 'Dr. Elena Cruz', specialty: 'Pediatrics', imageId: 'doc-3' },
-    clinic: { name: 'Brooklyn Wellness Clinic', address: '789 Flatbush Ave, Brooklyn, NY' },
+    doctor: { name: 'Dr. Anjali Desai', specialty: 'Pediatrics', imageId: 'doc-3' },
+    clinic: { name: 'Bangalore Wellness Clinic', address: '789 Koramangala, Bangalore, Karnataka' },
     date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 1 month ago
     time: '11:00 AM',
     status: 'completed',
