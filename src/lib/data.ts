@@ -168,6 +168,7 @@ export const emergencyRooms: EmergencyRoom[] = [
         bedsAvailable: 5,
         etaDrivingMinutes: 8,
         callNumber: '+91 22 3098 7654',
+        ambulanceNumber: '102',
         mapUrl: 'https://www.google.com/maps/dir/?api=1&destination=Apollo+Hospital,Navi+Mumbai',
         imageId: 'er-1'
     },
@@ -178,6 +179,7 @@ export const emergencyRooms: EmergencyRoom[] = [
         bedsAvailable: 2,
         etaDrivingMinutes: 12,
         callNumber: '+91 11 4713 5000',
+        ambulanceNumber: '102',
         mapUrl: 'https://www.google.com/maps/dir/?api=1&destination=Fortis+Escorts+Heart+Institute,New+Delhi',
         imageId: 'er-2'
     },
@@ -188,6 +190,7 @@ export const emergencyRooms: EmergencyRoom[] = [
         bedsAvailable: 8,
         etaDrivingMinutes: 15,
         callNumber: '+91 80 2502 4444',
+        ambulanceNumber: '108',
         mapUrl: 'https://www.google.com/maps/dir/?api=1&destination=Manipal+Hospital,Bangalore',
         imageId: 'er-3'
     }

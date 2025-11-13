@@ -63,6 +63,7 @@ export type EmergencyRoom = {
     bedsAvailable: number;
     etaDrivingMinutes: number;
     callNumber: string;
+    ambulanceNumber: string;
     mapUrl: string;
     imageId: string;
 }
