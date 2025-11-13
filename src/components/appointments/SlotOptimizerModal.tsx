@@ -80,39 +80,44 @@ export default function SlotOptimizerModal({ doctorId }: { doctorId: string }) {
   const handleBooking = async (slot: { start: string; end: string }) => {
     setIsBooking(true);
     
-    const doc = await getDoctorById(doctorId);
-    if (!doc) {
-        toast({ title: "Doctor not found", variant: "destructive" });
-        setIsBooking(false);
-        return;
-    }
-
-    setDoctor(doc);
-    setSelectedSlot(slot);
-    
     try {
+        const doc = await getDoctorById(doctorId);
+        if (!doc) {
+            toast({ title: "Doctor not found", variant: "destructive" });
+            setIsBooking(false);
+            return;
+        }
+
+        setDoctor(doc);
+        setSelectedSlot(slot);
+
         // In a real app, you'd get the patient's phone number from their profile
         const patientPhoneNumber = '+919876543210'; // Using a placeholder for now
         const startTime = new Date(slot.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const onDate = new Date(slot.start).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
         
         const messageBody = `Hi! Your appointment with ${doc.name} at ${doc.clinics[0].name} is confirmed for ${onDate} at ${startTime}. See you soon! - MediBook Pro`;
-
-        // We'll attempt to send, but proceed to confirmation even if it fails for the demo.
-        await runSendSms(patientPhoneNumber, messageBody);
         
-    } catch(error) {
-        console.error("SMS sending failed, but proceeding with confirmation for demo purposes:", error);
-        // We can optionally show a small, non-blocking toast.
-        toast({
-            title: "SMS not sent",
-            description: "Could not send SMS confirmation (demo mode).",
-        });
-    } finally {
-        // Always confirm the booking visually in the UI for the demo.
-        setBookingConfirmed(true);
+        try {
+          await runSendSms(patientPhoneNumber, messageBody);
+        } catch (smsError) {
+          console.error("SMS sending failed (demo mode, this is expected):", smsError);
+          // Optional: Show a non-disruptive toast
+          toast({
+            title: "SMS Confirmation Skipped",
+            description: "Live SMS is disabled in this demo.",
+          });
+        }
+    } catch (error) {
+        console.error("Booking failed:", error);
+        toast({ title: "Booking Failed", description: "An unexpected error occurred.", variant: "destructive"});
         setIsBooking(false);
+        return;
     }
+
+    // This will now always run, even if SMS fails
+    setBookingConfirmed(true);
+    setIsBooking(false);
   };
 
   const resetState = () => {
