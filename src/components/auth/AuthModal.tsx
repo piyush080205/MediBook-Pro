@@ -20,9 +20,14 @@ import {
   signInWithPhoneNumber,
   ConfirmationResult,
   signInAnonymously,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { Loader2, Phone, KeyRound, User, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Separator } from "../ui/separator";
+import { getInitials } from "@/lib/utils";
+
 
 // Make sure window.recaptchaVerifier is accessible
 declare global {
@@ -31,6 +36,15 @@ declare global {
     confirmationResult?: ConfirmationResult;
   }
 }
+
+const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid" viewBox="0 0 256 262" {...props}>
+        <path fill="#4285F4" d="M255.878 133.451c0-10.734-.871-18.567-2.756-26.686H130.55v48.448h71.947c-1.45 12.04-9.283 30.175-26.686 42.448l44.58 34.527C240.472 201.625 255.878 172.98 255.878 133.451z"/>
+        <path fill="#34A853" d="m130.55 261.1c35.248 0 64.839-11.605 86.453-31.622l-44.58-34.527c-11.992 8.187-27.023 13.04-41.873 13.04-32.255 0-59.523-21.842-69.231-51.053l-46.16 35.892c21.841 43.187 64.446 72.247 113.821 72.247z"/>
+        <path fill="#FBBC05" d="m61.319 156.358c-3.582-10.734-5.568-22.256-5.568-34.205s1.986-23.471 5.568-34.205l-46.16-35.892C5.071 71.458 0 92.213 0 114.258c0 22.046 5.071 42.802 15.159 62.091l46.16-35.892z"/>
+        <path fill="#EB4335" d="m130.55 51.479c19.205 0 36.479 6.675 50.134 19.868l38.979-38.979C195.388 11.605 165.798 0 130.55 0 81.175 0 38.57 29.06 17.729 72.247l46.16 35.892c9.708-29.211 36.976-51.052 66.661-51.052z"/>
+    </svg>
+)
 
 export function AuthModal({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
@@ -149,6 +163,29 @@ export function AuthModal({ children }: { children: React.ReactNode }) {
       }
   }
 
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+        toast({ title: "Successfully Logged In with Google!" });
+        resetStateAndClose();
+    } catch (err: any) {
+        console.error("Google Sign-In Error:", err);
+        let description = "Could not sign in with Google. Please try again.";
+        if (err.code === 'auth/popup-closed-by-user') {
+            description = "You closed the sign-in window before completing the process.";
+        } else if (err.code === 'auth/account-exists-with-different-credential') {
+            description = "An account already exists with the same email address but different sign-in credentials."
+        }
+        setError(description);
+    } finally {
+        setIsLoading(false);
+    }
+  }
+
+
   const resetStateAndClose = () => {
     setOpen(false);
   };
@@ -234,10 +271,22 @@ export function AuthModal({ children }: { children: React.ReactNode }) {
                  <Button size="lg" className="w-full" onClick={() => setStep('phone')} disabled={isLoading}>
                     <Phone className="mr-2 h-5 w-5" /> Sign in with Phone
                  </Button>
+                 
+                 <div className="relative">
+                    <Separator />
+                    <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-background px-2 text-sm text-muted-foreground">OR</span>
+                 </div>
+                 
+                 <Button size="lg" variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-5 w-5" />}
+                    Sign in with Google
+                 </Button>
+
                  <Button size="lg" variant="secondary" className="w-full" onClick={handleAnonymousSignIn} disabled={isLoading}>
-                    {isLoading && step !== 'phone' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <User className="mr-2 h-5 w-5" />}
+                    <User className="mr-2 h-5 w-5" />
                     Continue as Guest
                  </Button>
+
                  {error && <p className="text-sm text-destructive text-center">{error}</p>}
             </div>
         )
@@ -259,3 +308,4 @@ export function AuthModal({ children }: { children: React.ReactNode }) {
   );
 }
 
+    

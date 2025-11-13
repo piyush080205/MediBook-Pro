@@ -369,7 +369,8 @@
   "auth": {
     "providers": [
       "phone",
-      "anonymous"
+      "anonymous",
+      "google.com"
     ]
   },
   "firestore": {
@@ -453,4 +454,5 @@
     "reasoning": "The data structure is updated to support the full Patient Safety Suite. It includes new collections for logging various operational processes like triage, load balancing, and rescheduling. Existing entities like User and Doctor are expanded with new fields (e.g., `healthWallet`, `performance`) as required by the new features. Security rules will be configured to restrict write access on log collections to backend processes, ensuring data integrity."
   }
 }
+
     

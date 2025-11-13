@@ -10,7 +10,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useAuth, useUser } from "@/firebase";
-import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { getInitials } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -69,14 +69,17 @@ export default function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-9 w-9">
-                      <AvatarFallback>{user.isAnonymous ? 'G' : (user.phoneNumber ? user.phoneNumber.slice(-2) : getInitials(user.uid))}</AvatarFallback>
+                      {user.photoURL ? <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} /> :
+                      <AvatarFallback>{user.isAnonymous ? 'G' : getInitials(user.displayName || user.email || user.uid)}</AvatarFallback>}
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.isAnonymous ? "Guest User" : user.phoneNumber}</p>
+                      <p className="text-sm font-medium leading-none">
+                        {user.isAnonymous ? "Guest User" : (user.displayName || user.email || user.phoneNumber)}
+                      </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user.uid}
                       </p>
@@ -131,3 +134,5 @@ export default function Header() {
     </header>
   );
 }
+
+    
