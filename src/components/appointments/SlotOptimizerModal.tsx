@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -97,20 +98,19 @@ export default function SlotOptimizerModal({ doctorId }: { doctorId: string }) {
         
         const messageBody = `Hi! Your appointment with ${doc.name} at ${doc.clinics[0].name} is confirmed for ${onDate} at ${startTime}. See you soon! - MediBook Pro`;
 
+        // We'll attempt to send, but proceed to confirmation even if it fails for the demo.
         await runSendSms(patientPhoneNumber, messageBody);
         
-        setBookingConfirmed(true);
-
     } catch(error) {
-        console.error("SMS sending failed:", error);
-        // We still confirm the booking visually, but show a toast that SMS failed.
-        setBookingConfirmed(true);
+        console.error("SMS sending failed, but proceeding with confirmation for demo purposes:", error);
+        // We can optionally show a small, non-blocking toast.
         toast({
-            title: "Booking Confirmed, but SMS failed",
-            description: "Your appointment is booked, but we couldn't send an SMS confirmation.",
-            variant: "default" // It's not a destructive error for the user's booking itself
+            title: "SMS not sent",
+            description: "Could not send SMS confirmation (demo mode).",
         });
     } finally {
+        // Always confirm the booking visually in the UI for the demo.
+        setBookingConfirmed(true);
         setIsBooking(false);
     }
   };
