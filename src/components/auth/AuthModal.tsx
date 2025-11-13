@@ -23,8 +23,6 @@ import {
 } from "firebase/auth";
 import { useAuth } from "@/firebase";
 
-// Store instances on window to preserve them across re-renders,
-// especially in development with React's Strict Mode.
 declare global {
   interface Window {
     recaptchaVerifier?: RecaptchaVerifier;
@@ -41,35 +39,41 @@ export function AuthModal() {
   const [isVerifying, setIsVerifying] = useState(false);
   const auth = useAuth();
   
-  // Use a ref for the container to ensure it's available.
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
 
-  const cleanupRecaptcha = () => {
+  const cleanupRecaptcha = useCallback(() => {
     if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
+      // Get the container of the verifier
+      const container = window.recaptchaVerifier.container as HTMLElement | null;
+      // If container exists, clear it
+      if (container) {
+        container.innerHTML = '';
+      }
+      // @ts-ignore
+      window.recaptchaVerifier = undefined;
     }
-  };
+  }, []);
 
   const setupRecaptcha = useCallback(() => {
     if (!auth || !recaptchaContainerRef.current) return;
     
-    cleanupRecaptcha(); // Clean up any old instance first
+    // Ensure we don't create a new verifier if one already exists
+    if (window.recaptchaVerifier) {
+        return;
+    }
 
     try {
         const verifier = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
           size: "invisible",
-          callback: () => {
-            // This callback is called when the reCAPTCHA is successfully solved.
-            // The user does not need to do anything.
-          },
+          callback: () => {}, // Solved
           'expired-callback': () => {
-            // Response expired. Ask user to solve reCAPTCHA again.
             toast({
                 title: "reCAPTCHA Expired",
                 description: "Please try sending the OTP again.",
                 variant: "destructive"
             });
             setIsSending(false);
+            cleanupRecaptcha(); // Clean up to allow re-initialization
           }
         });
         window.recaptchaVerifier = verifier;
@@ -81,19 +85,22 @@ export function AuthModal() {
             variant: "destructive"
         });
     }
-  }, [auth]);
+  }, [auth, cleanupRecaptcha]);
 
   useEffect(() => {
+    // When the modal opens, ensure reCAPTCHA is set up.
     if (open) {
-      // Setup reCAPTCHA once the modal is open and the container is rendered.
-      setupRecaptcha();
+      // Use a timeout to ensure the DOM element is ready
+      const timeoutId = setTimeout(() => {
+        setupRecaptcha();
+      }, 100);
+      return () => clearTimeout(timeoutId);
     } else {
-      // Clean up when the modal is closed.
+      // When the modal closes, clean everything up.
       cleanupRecaptcha();
     }
-    // Cleanup on component unmount
-    return () => cleanupRecaptcha();
-  }, [open, setupRecaptcha]);
+  }, [open, setupRecaptcha, cleanupRecaptcha]);
+  
 
   const handleSendOtp = async () => {
     if (!phoneNumber) {
@@ -102,7 +109,7 @@ export function AuthModal() {
     }
     if (!window.recaptchaVerifier) {
         toast({ title: "reCAPTCHA not ready", description: "Please wait a moment and try again.", variant: "destructive" });
-        setupRecaptcha(); // Try to set it up again
+        setupRecaptcha();
         return;
     }
     
@@ -131,7 +138,7 @@ export function AuthModal() {
                 variant: "destructive",
             });
        }
-       // Reset reCAPTCHA for the next attempt
+       cleanupRecaptcha();
        setupRecaptcha();
     } finally {
       setIsSending(false);
@@ -153,7 +160,7 @@ export function AuthModal() {
     try {
       await window.confirmationResult.confirm(otp);
       toast({ title: "Login Successful!", description: "You are now logged in." });
-      setOpen(false); // Close modal on success
+      setOpen(false);
     } catch (error: any) {
       console.error("Error verifying OTP:", error);
       toast({
@@ -177,7 +184,9 @@ export function AuthModal() {
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
-        if (!isOpen) resetState();
+        if (!isOpen) {
+            resetState();
+        }
         setOpen(isOpen);
     }}>
       <DialogTrigger asChild>
@@ -251,6 +260,7 @@ export function AuthModal() {
               </Button>
                <Button variant="link" size="sm" onClick={() => {
                    setStep('phone');
+                   cleanupRecaptcha();
                    setupRecaptcha();
                }}>
                 Change phone number
