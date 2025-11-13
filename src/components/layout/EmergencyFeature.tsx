@@ -16,7 +16,6 @@ import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import MapView from './Map';
 import type { EmergencyRoom } from '@/lib/types';
-import { APIProvider } from '@vis.gl/react-google-maps';
 
 export default function EmergencyFeature() {
     const [selectedER, setSelectedER] = useState<EmergencyRoom | null>(emergencyRooms[0] || null);
@@ -45,9 +44,7 @@ export default function EmergencyFeature() {
             </DialogHeader>
             <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6 h-full overflow-hidden">
                 <div className="md:col-span-2 h-full rounded-lg overflow-hidden relative">
-                    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
-                        <MapView locations={emergencyRooms} onSelectER={setSelectedER} selectedER={selectedER} />
-                    </APIProvider>
+                    <MapView locations={emergencyRooms} onSelectER={setSelectedER} selectedER={selectedER} />
                 </div>
                 <div className="flex flex-col gap-4 overflow-y-auto pr-2">
                     <h3 className="font-bold text-lg">Hospitals List</h3>

@@ -1,10 +1,13 @@
 "use client"
 
-import React, { useState } from 'react';
-import { Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps';
+import React, { useState, useEffect, useRef } from 'react';
+import Map, { Marker, Popup, MapRef } from 'react-map-gl/maplibre';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import type { EmergencyRoom } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Phone, Map as MapIcon } from 'lucide-react';
+import { Pin } from 'lucide-react';
+
 
 interface MapViewProps {
     locations: EmergencyRoom[];
@@ -13,46 +16,72 @@ interface MapViewProps {
 }
 
 export default function MapView({ locations, onSelectER, selectedER }: MapViewProps) {
-    const [infoWindowOpen, setInfoWindowOpen] = useState(true);
+    const mapRef = useRef<MapRef>(null);
 
-    const handleMarkerClick = (er: EmergencyRoom) => {
-        onSelectER(er);
-        setInfoWindowOpen(true);
+    const initialCenter = locations[0] 
+        ? { latitude: locations[0].location.lat, longitude: locations[0].location.lng } 
+        : { latitude: 20.5937, longitude: 78.9629 };
+
+    useEffect(() => {
+        if (selectedER && mapRef.current) {
+            mapRef.current.flyTo({
+                center: [selectedER.location.lng, selectedER.location.lat],
+                zoom: 13,
+                duration: 1500
+            });
+        }
+    }, [selectedER]);
+
+    const mapTilerApiKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
+
+    if (!mapTilerApiKey) {
+        return (
+            <div className="w-full h-full bg-muted flex items-center justify-center">
+                <p className="text-destructive text-center p-4">
+                    MapTiler API key is not configured. Please add<br/>
+                    <code className="bg-destructive/20 px-1 rounded-sm">NEXT_PUBLIC_MAPTILER_API_KEY</code><br/>
+                     to your .env file.
+                </p>
+            </div>
+        );
     }
     
-    const initialCenter = locations[0] ? { lat: locations[0].location.lat, lng: locations[0].location.lng } : { lat: 20.5937, lng: 78.9629 };
-
+    const mapStyle = `https://api.maptiler.com/maps/streets-v2/style.json?key=${mapTilerApiKey}`;
+    
     return (
         <Map
-            defaultZoom={11}
-            defaultCenter={initialCenter}
-            center={selectedER ? { lat: selectedER.location.lat, lng: selectedER.location.lng } : initialCenter}
-            gestureHandling={'greedy'}
-            disableDefaultUI={true}
-            mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'}
-            className="w-full h-full"
+            ref={mapRef}
+            initialViewState={{
+                ...initialCenter,
+                zoom: 11
+            }}
+            style={{width: '100%', height: '100%'}}
+            mapStyle={mapStyle}
         >
             {locations.map(er => (
-                <AdvancedMarker 
-                    key={er.id} 
-                    position={{ lat: er.location.lat, lng: er.location.lng }}
-                    onClick={() => handleMarkerClick(er)}
+                <Marker
+                    key={er.id}
+                    longitude={er.location.lng}
+                    latitude={er.location.lat}
+                    onClick={(e) => {
+                        e.originalEvent.stopPropagation();
+                        onSelectER(er);
+                    }}
                 >
-                     <Pin 
-                        background={selectedER?.id === er.id ? '#DB2777' : '#0F172A'}
-                        borderColor={selectedER?.id === er.id ? '#831843' : '#ffffff'}
-                        glyphColor={selectedER?.id === er.id ? '#ffffff' : '#ffffff'}
-                     />
-                </AdvancedMarker>
+                    <Pin className={`h-8 w-8 cursor-pointer transition-transform hover:scale-110 ${selectedER?.id === er.id ? 'text-destructive fill-destructive/50' : 'text-primary fill-primary/30'}`} />
+                </Marker>
             ))}
 
-            {selectedER && infoWindowOpen && (
-                <InfoWindow 
-                    position={{ lat: selectedER.location.lat, lng: selectedER.location.lng }}
-                    onCloseClick={() => setInfoWindowOpen(false)}
-                    minWidth={250}
+            {selectedER && (
+                <Popup
+                    longitude={selectedER.location.lng}
+                    latitude={selectedER.location.lat}
+                    onClose={() => onSelectER(null)}
+                    closeOnClick={false}
+                    anchor="bottom"
+                    offset={35}
                 >
-                    <div className="p-2 space-y-2">
+                     <div className="p-1 space-y-2 max-w-xs">
                         <h4 className="font-bold text-md">{selectedER.name}</h4>
                         <p className="text-sm text-muted-foreground">{selectedER.location.address}</p>
                         <div className="flex gap-2 mt-2">
@@ -64,7 +93,7 @@ export default function MapView({ locations, onSelectER, selectedER }: MapViewPr
                              </Button>
                          </div>
                     </div>
-                </InfoWindow>
+                </Popup>
             )}
         </Map>
     )
