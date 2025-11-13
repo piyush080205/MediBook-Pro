@@ -2,8 +2,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CheckCircle, Clock, HeartPulse, Stethoscope, Users } from 'lucide-react';
-import { TriageModal } from '@/components/triage/TriageModal';
+import { CheckCircle, Clock, HeartPulse, Stethoscope, Users, Sparkles } from 'lucide-react';
 import { getDoctors } from '@/lib/data';
 import Link from 'next/link';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -26,7 +25,12 @@ export default async function Home() {
                 Stop waiting, start healing. MediBook Pro uses AI to find the right doctor, predict wait times, and optimize your appointment, all in one place.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <TriageModal />
+                <Button variant="default" size="lg" asChild>
+                    <Link href="/triage">
+                        <Sparkles className="mr-2 h-5 w-5" />
+                        Start Smart Triage
+                    </Link>
+                </Button>
                 <Button variant="secondary" size="lg" asChild>
                   <Link href="/doctors">Find a Doctor</Link>
                 </Button>

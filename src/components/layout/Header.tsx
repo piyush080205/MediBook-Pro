@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { Stethoscope, LogOut, Menu, User as UserIcon } from "lucide-react";
+import { Stethoscope, LogOut, Menu, User as UserIcon, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -56,7 +56,13 @@ export default function Header() {
             </Link>
           ))}
         </nav>
-        <div className="flex flex-1 items-center justify-end space-x-4">
+        <div className="flex flex-1 items-center justify-end space-x-2">
+           <Button variant="outline" asChild>
+              <Link href="/triage">
+                <Sparkles className="mr-2 h-4 w-4" />
+                Smart Triage
+              </Link>
+            </Button>
           {!isUserLoading && (
             user ? (
               <DropdownMenu>
@@ -86,7 +92,7 @@ export default function Header() {
             ) : (
                 <AuthModal>
                   <Button>
-                      <UserIcon className="mr-2 h-4 w-4" /> Login / Sign Up
+                      <UserIcon className="mr-2 h-4 w-4" /> Login
                   </Button>
                 </AuthModal>
             )
