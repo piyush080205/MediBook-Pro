@@ -178,6 +178,8 @@ export function AuthModal({ children }: { children: React.ReactNode }) {
             description = "You closed the sign-in window before completing the process.";
         } else if (err.code === 'auth/account-exists-with-different-credential') {
             description = "An account already exists with the same email address but different sign-in credentials."
+        } else if (err.code === 'auth/operation-not-allowed') {
+            description = "This sign-in method isn't enabled. The project administrator must enable it in the Firebase console."
         }
         setError(description);
     } finally {
@@ -307,5 +309,3 @@ export function AuthModal({ children }: { children: React.ReactNode }) {
     </Dialog>
   );
 }
-
-    
