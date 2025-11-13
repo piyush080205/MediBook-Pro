@@ -10,15 +10,17 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Phone, Map, BedDouble, Wind, X } from 'lucide-react';
+import { AlertTriangle, Phone, Map, BedDouble, Wind, Loader2 } from 'lucide-react';
 import { emergencyRooms } from '@/lib/data';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import MapView from './Map';
 import type { EmergencyRoom } from '@/lib/types';
+import { useGeolocation } from '@/hooks/use-geolocation';
 
 export default function EmergencyFeature() {
     const [selectedER, setSelectedER] = useState<EmergencyRoom | null>(emergencyRooms[0] || null);
+    const { coordinates, isLoading: isLocationLoading, error: locationError } = useGeolocation();
 
     return (
         <Dialog>
@@ -43,8 +45,34 @@ export default function EmergencyFeature() {
             </DialogDescription>
             </DialogHeader>
             <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6 h-full overflow-hidden">
-                <div className="md:col-span-2 h-full rounded-lg overflow-hidden relative">
-                    <MapView locations={emergencyRooms} onSelectER={setSelectedER} selectedER={selectedER} />
+                <div className="md:col-span-2 h-full rounded-lg overflow-hidden relative bg-muted flex items-center justify-center">
+                    {isLocationLoading && (
+                        <div className="z-10 text-center">
+                            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                            <p className="font-semibold">Fetching your location...</p>
+                        </div>
+                    )}
+                    {locationError && !isLocationLoading && (
+                         <div className="z-10 text-center p-4">
+                            <p className="font-semibold text-destructive">Could not get your location.</p>
+                            <p className="text-sm text-muted-foreground">{locationError}. Please enable location services in your browser.</p>
+                        </div>
+                    )}
+                    {coordinates && (
+                         <MapView 
+                            locations={emergencyRooms} 
+                            onSelectER={setSelectedER} 
+                            selectedER={selectedER}
+                            userLocation={coordinates}
+                        />
+                    )}
+                     {!coordinates && !isLocationLoading && !locationError && (
+                         <MapView 
+                            locations={emergencyRooms} 
+                            onSelectER={setSelectedER} 
+                            selectedER={selectedER}
+                        />
+                    )}
                 </div>
                 <div className="flex flex-col gap-4 overflow-y-auto pr-2">
                     <h3 className="font-bold text-lg">Hospitals List</h3>

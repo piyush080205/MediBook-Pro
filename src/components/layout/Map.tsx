@@ -5,22 +5,24 @@ import Map, { Marker, Popup, MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { EmergencyRoom } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Phone, Map as MapIcon } from 'lucide-react';
-import { Pin } from 'lucide-react';
+import { Phone, Map as MapIcon, Pin, LocateFixed } from 'lucide-react';
 
 
 interface MapViewProps {
     locations: EmergencyRoom[];
     onSelectER: (er: EmergencyRoom) => void;
     selectedER: EmergencyRoom | null;
+    userLocation?: { lat: number, lng: number };
 }
 
-export default function MapView({ locations, onSelectER, selectedER }: MapViewProps) {
+export default function MapView({ locations, onSelectER, selectedER, userLocation }: MapViewProps) {
     const mapRef = useRef<MapRef>(null);
 
-    const initialCenter = locations[0] 
-        ? { latitude: locations[0].location.lat, longitude: locations[0].location.lng } 
-        : { latitude: 20.5937, longitude: 78.9629 };
+    const initialCenter = userLocation
+        ? { latitude: userLocation.lat, longitude: userLocation.lng }
+        : (locations[0] 
+            ? { latitude: locations[0].location.lat, longitude: locations[0].location.lng } 
+            : { latitude: 20.5937, longitude: 78.9629 });
 
     useEffect(() => {
         if (selectedER && mapRef.current) {
@@ -31,6 +33,16 @@ export default function MapView({ locations, onSelectER, selectedER }: MapViewPr
             });
         }
     }, [selectedER]);
+    
+    useEffect(() => {
+        if(userLocation && mapRef.current) {
+            mapRef.current.flyTo({
+                center: [userLocation.lng, userLocation.lat],
+                zoom: 12,
+                duration: 1500
+            });
+        }
+    }, [userLocation])
 
     const mapTilerApiKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
 
@@ -53,11 +65,20 @@ export default function MapView({ locations, onSelectER, selectedER }: MapViewPr
             ref={mapRef}
             initialViewState={{
                 ...initialCenter,
-                zoom: 11
+                zoom: userLocation ? 12 : 11
             }}
             style={{width: '100%', height: '100%'}}
             mapStyle={mapStyle}
         >
+            {userLocation && (
+                <Marker longitude={userLocation.lng} latitude={userLocation.lat}>
+                     <div className="relative">
+                        <LocateFixed className="h-6 w-6 text-blue-600 animate-pulse" />
+                        <span className="absolute h-6 w-6 rounded-full bg-blue-500/20 animate-ping -z-10"></span>
+                    </div>
+                </Marker>
+            )}
+
             {locations.map(er => (
                 <Marker
                     key={er.id}
