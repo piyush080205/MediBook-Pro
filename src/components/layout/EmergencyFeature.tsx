@@ -39,7 +39,7 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
 
 type EmergencyRoomWithDistance = EmergencyRoom & { distance?: number };
 
-const ICE_CONTACT = "911"; // Placeholder for In Case of Emergency contact
+const ICE_CONTACT = "112"; // Pan-India Emergency Number
 const WAITING_INSTRUCTIONS = [
     "If it's safe, stay where you are.",
     "Try to remain calm and breathe slowly.",
