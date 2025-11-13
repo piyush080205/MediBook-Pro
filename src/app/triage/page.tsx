@@ -57,6 +57,15 @@ export default function TriagePage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const isListening = conversationState !== 'idle';
+  
+  const form = useForm<z.infer<typeof triageFormSchema>>({
+    resolver: zodResolver(triageFormSchema),
+    defaultValues: {
+      symptoms: "",
+      age: undefined,
+      chronicFlags: "",
+    },
+  });
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -126,15 +135,6 @@ export default function TriagePage() {
       if (recognitionRef.current) recognitionRef.current.abort();
     };
   }, [conversationState, form, router, triageResult]);
-
-  const form = useForm<z.infer<typeof triageFormSchema>>({
-    resolver: zodResolver(triageFormSchema),
-    defaultValues: {
-      symptoms: "",
-      age: undefined,
-      chronicFlags: "",
-    },
-  });
 
   const speakResult = async (text: string, onEnd?: () => void) => {
     try {
