@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -22,8 +22,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Stethoscope, Sparkles, Loader2, Activity, ArrowRightCircle, ShieldAlert, HeartPulse, HelpCircle } from 'lucide-react';
-import { runSmartTriage } from '@/app/actions';
+import { Stethoscope, Sparkles, Loader2, Activity, ArrowRightCircle, ShieldAlert, HeartPulse, HelpCircle, Mic, MicOff, Square } from 'lucide-react';
+import { runSmartTriage, runTextToSpeech } from '@/app/actions';
 import { toast } from '@/hooks/use-toast';
 import type { SmartTriageOutput } from '@/ai/flows/smart-triage-engine';
 import { useRouter } from 'next/navigation';
@@ -32,7 +32,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { WifiOff } from 'lucide-react';
-
 
 const triageFormSchema = z.object({
   symptoms: z.string().min(5, {
@@ -47,28 +46,56 @@ const LAST_TRIAGE_RESULT_KEY = 'lastTriageResult';
 
 export default function TriagePage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [triageResult, setTriageResult] = useState<SmartTriageOutput | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
+  const recognitionRef = useRef<any>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const updateOnlineStatus = () => {
-      setIsOnline(navigator.onLine);
-    };
+    // Check for SpeechRecognition API
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        form.setValue('symptoms', transcript);
+        setIsListening(false);
+        // Automatically submit the form after getting the transcript
+        form.handleSubmit(onSubmit)();
+      };
+      
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        toast({ title: 'Voice Error', description: `Could not recognize speech: ${event.error}`, variant: 'destructive' });
+        setIsListening(false);
+      };
+
+       recognitionRef.current.onend = () => {
+         setIsListening(false);
+       };
+
+    }
+
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
     updateOnlineStatus();
 
     if (!navigator.onLine) {
         const cachedResult = localStorage.getItem(LAST_TRIAGE_RESULT_KEY);
-        if (cachedResult) {
-            setTriageResult(JSON.parse(cachedResult));
-        }
+        if (cachedResult) setTriageResult(JSON.parse(cachedResult));
     }
 
     return () => {
       window.removeEventListener('online', updateOnlineStatus);
       window.removeEventListener('offline', updateOnlineStatus);
+      if (recognitionRef.current) recognitionRef.current.abort();
     };
   }, []);
 
@@ -81,13 +108,22 @@ export default function TriagePage() {
     },
   });
 
+  const speakResult = async (text: string) => {
+    try {
+      const { audio: audioDataUri } = await runTextToSpeech(text);
+      if (audioRef.current) {
+        audioRef.current.src = audioDataUri;
+        audioRef.current.play();
+      }
+    } catch (error) {
+      console.error('Text-to-speech failed:', error);
+      toast({ title: "Could not generate audio", variant: "destructive" });
+    }
+  }
+
   async function onSubmit(values: z.infer<typeof triageFormSchema>) {
     if (!isOnline) {
-        toast({
-            title: "You are offline",
-            description: "Please connect to the internet to run a new analysis.",
-            variant: "destructive",
-        });
+        toast({ title: "You are offline", description: "Please connect to the internet to run a new analysis.", variant: "destructive" });
         return;
     }
     setIsLoading(true);
@@ -100,21 +136,37 @@ export default function TriagePage() {
       });
       setTriageResult(result);
       localStorage.setItem(LAST_TRIAGE_RESULT_KEY, JSON.stringify(result));
+      
+      // Construct a text version of the result to be spoken
+      let resultText = '';
+      if(result.isQuery && result.procedureExplanation) {
+        resultText = result.procedureExplanation.join(' ');
+      } else if (!result.isQuery) {
+        resultText = `Based on your symptoms, the AI recommends the following. Risk Level: ${result.riskCategory}. Urgency: ${result.urgency}. Recommended Specialty: ${result.recommendedSpecialty}. ${result.suggestedNextSteps?.join(' ')}`;
+      }
+      if(resultText) speakResult(resultText);
+
     } catch (error) {
-      toast({
-        title: "Analysis Failed",
-        description: "An error occurred while analyzing your request. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Analysis Failed", description: "An error occurred. Please try again.", variant: "destructive" });
       console.error(error);
     } finally {
       setIsLoading(false);
     }
   }
 
-  const handleFindDoctor = () => {
-    if (triageResult?.recommendedSpecialty) {
-        router.push(`/doctors?specialty=${triageResult.recommendedSpecialty}`);
+  const handleMicClick = () => {
+    if (!recognitionRef.current) {
+      toast({ title: "Voice Not Supported", description: "Your browser doesn't support voice recognition.", variant: "destructive" });
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      form.reset();
+      setTriageResult(null);
+      recognitionRef.current.start();
+      setIsListening(true);
     }
   };
 
@@ -126,14 +178,10 @@ export default function TriagePage() {
   
   const getRiskCategoryClass = (category: 'low' | 'medium' | 'high' | undefined) => {
     switch (category) {
-      case 'high':
-        return 'bg-destructive text-destructive-foreground';
-      case 'medium':
-        return 'bg-yellow-500 text-black';
-      case 'low':
-        return 'bg-green-500 text-white';
-      default:
-        return 'bg-secondary text-secondary-foreground';
+      case 'high': return 'bg-destructive text-destructive-foreground';
+      case 'medium': return 'bg-yellow-500 text-black';
+      case 'low': return 'bg-green-500 text-white';
+      default: return 'bg-secondary text-secondary-foreground';
     }
   }
 
@@ -145,8 +193,7 @@ export default function TriagePage() {
             <div className="space-y-6 pt-4">
                 <div className="text-center space-y-2">
                     <h3 className="text-xl font-bold flex items-center justify-center gap-2">
-                        <HelpCircle className="h-6 w-6 text-primary" />
-                        First-Aid Information
+                        <HelpCircle className="h-6 w-6 text-primary" /> First-Aid Information
                     </h3>
                 </div>
                 <div>
@@ -198,9 +245,7 @@ export default function TriagePage() {
                 <div>
                     <h4 className="font-semibold mb-2">Contributing Factors:</h4>
                     <div className="flex flex-wrap gap-2">
-                        {triageResult.contributingFactors.map((factor, i) => (
-                            <Badge key={i} variant="secondary">{factor}</Badge>
-                        ))}
+                        {triageResult.contributingFactors.map((factor, i) => ( <Badge key={i} variant="secondary">{factor}</Badge> ))}
                     </div>
                 </div>
             )}
@@ -236,7 +281,7 @@ export default function TriagePage() {
             <div className="flex flex-col sm:flex-row gap-2 pt-4">
                 <Button variant="ghost" onClick={resetForm} disabled={!isOnline}>Start Over</Button>
                 {triageResult.recommendedSpecialty && (
-                    <Button onClick={handleFindDoctor} className="flex-1" disabled={!isOnline}>
+                    <Button onClick={() => router.push(`/doctors?specialty=${triageResult.recommendedSpecialty}`)} className="flex-1" disabled={!isOnline}>
                         Find a {triageResult.recommendedSpecialty}
                     </Button>
                 )}
@@ -247,11 +292,17 @@ export default function TriagePage() {
 
   return (
      <div className="container mx-auto px-4 md:px-6 py-12 flex justify-center">
+        <audio ref={audioRef} className="hidden" />
         <Card className="w-full max-w-2xl">
            <CardHeader>
-            <CardTitle className="flex items-center gap-3 font-headline text-3xl">
-                <Sparkles className="text-accent h-8 w-8" />
-                Smart Assistant
+            <CardTitle className="flex items-center justify-between font-headline text-3xl">
+                <div className="flex items-center gap-3">
+                    <Sparkles className="text-accent h-8 w-8" />
+                    Smart Assistant
+                </div>
+                <Button size="icon" variant={isListening ? 'destructive' : 'outline'} onClick={handleMicClick} className="rounded-full h-12 w-12 shrink-0">
+                    {isListening ? <Square className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+                </Button>
             </CardTitle>
             <CardDescription className='flex items-center gap-2 border-l-4 border-destructive pl-3 text-destructive'>
                 <ShieldAlert className='h-4 w-4 shrink-0' />
@@ -261,7 +312,7 @@ export default function TriagePage() {
             <CardContent>
                  {!triageResult ? (
                     <>
-                    {!isOnline && (
+                    {!isOnline && !isListening && (
                          <Alert variant="destructive" className="mb-6">
                             <WifiOff className="h-4 w-4" />
                             <AlertTitle>You are currently offline</AlertTitle>
@@ -270,6 +321,12 @@ export default function TriagePage() {
                             </AlertDescription>
                         </Alert>
                     )}
+                    {isListening ? (
+                         <div className="text-center p-8 space-y-4">
+                            <Mic className="h-12 w-12 mx-auto text-primary animate-pulse" />
+                            <p className="font-medium text-muted-foreground">Listening... Please state your symptoms.</p>
+                         </div>
+                    ) : (
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <FormField
@@ -354,6 +411,7 @@ export default function TriagePage() {
                         </Button>
                         </form>
                     </Form>
+                    )}
                     </>
                     ) : (
                     <div>

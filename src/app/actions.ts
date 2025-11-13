@@ -5,6 +5,7 @@ import { optimizeSlots, OptimizeSlotsInput } from "@/ai/flows/slot-optimization-
 import { smartTriage, SmartTriageInput } from "@/ai/flows/smart-triage-engine";
 import { getClinicStats, ClinicStatsInput } from "@/ai/flows/clinic-stats-engine";
 import { runDocumentInterpreter as runDocumentInterpreterFlow, DocumentInterpreterInput } from "@/ai/flows/document-interpreter-flow";
+import { textToSpeech as textToSpeechFlow } from "@/ai/flows/text-to-speech-flow";
 import { sendSms } from "@/lib/sms";
 
 export async function runSmartTriage(input: SmartTriageInput) {
@@ -31,4 +32,8 @@ export async function runSendSms(to: string, body: string) {
 
 export async function runDocumentInterpreter(input: DocumentInterpreterInput) {
     return await runDocumentInterpreterFlow(input);
+}
+
+export async function runTextToSpeech(text: string) {
+    return await textToSpeechFlow(text);
 }
