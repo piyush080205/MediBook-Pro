@@ -11,21 +11,23 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { runSlotOptimization } from "@/app/actions";
+import { runSlotOptimization, runSendSms } from "@/app/actions";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Calendar as CalendarIcon, Sparkles } from "lucide-react";
 import type { OptimizeSlotsOutput } from "@/ai/flows/slot-optimization-engine";
 import { getDoctorById } from "@/lib/data";
 import BookingConfirmation from "./BookingConfirmation";
+import type { Doctor } from "@/lib/types";
 
 export default function SlotOptimizerModal({ doctorId }: { doctorId: string }) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isLoading, setIsLoading] = useState(false);
+  const [isBooking, setIsBooking] = useState(false);
   const [optimizedSlots, setOptimizedSlots] = useState<OptimizeSlotsOutput['bestSlots']>([]);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{start: string, end: string} | null>(null);
-  const [doctor, setDoctor] = useState<Awaited<ReturnType<typeof getDoctorById>>>(null);
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
   
   const handleFindSlots = async () => {
     if (!date) {
@@ -74,16 +76,42 @@ export default function SlotOptimizerModal({ doctorId }: { doctorId: string }) {
   };
 
   const handleBooking = async (slot: { start: string; end: string }) => {
-    setIsLoading(true);
-    // Simulate fetching doctor details
+    setIsBooking(true);
+    
     const doc = await getDoctorById(doctorId);
+    if (!doc) {
+        toast({ title: "Doctor not found", variant: "destructive" });
+        setIsBooking(false);
+        return;
+    }
+
     setDoctor(doc);
     setSelectedSlot(slot);
-    // Simulate booking delay
-    setTimeout(() => {
+    
+    try {
+        // In a real app, you'd get the patient's phone number from their profile
+        const patientPhoneNumber = '+919876543210'; // Using a placeholder for now
+        const startTime = new Date(slot.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const onDate = new Date(slot.start).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+        
+        const messageBody = `Hi! Your appointment with ${doc.name} at ${doc.clinics[0].name} is confirmed for ${onDate} at ${startTime}. See you soon! - MediBook Pro`;
+
+        await runSendSms(patientPhoneNumber, messageBody);
+        
         setBookingConfirmed(true);
-        setIsLoading(false);
-    }, 1500);
+
+    } catch(error) {
+        console.error("SMS sending failed:", error);
+        // We still confirm the booking visually, but show a toast that SMS failed.
+        setBookingConfirmed(true);
+        toast({
+            title: "Booking Confirmed, but SMS failed",
+            description: "Your appointment is booked, but we couldn't send an SMS confirmation.",
+            variant: "default" // It's not a destructive error for the user's booking itself
+        });
+    } finally {
+        setIsBooking(false);
+    }
   };
 
   const resetState = () => {
@@ -130,7 +158,7 @@ export default function SlotOptimizerModal({ doctorId }: { doctorId: string }) {
                         />
                     </div>
                     <Button onClick={handleFindSlots} disabled={isLoading || !date} className="w-full mt-4">
-                        {isLoading && !optimizedSlots.length ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                         Find Best Slots
                     </Button>
                 </div>
@@ -148,13 +176,13 @@ export default function SlotOptimizerModal({ doctorId }: { doctorId: string }) {
                                     variant="outline" 
                                     className="w-full justify-start"
                                     onClick={() => handleBooking(slot)}
-                                    disabled={isLoading}
+                                    disabled={isBooking}
                                 >
                                     <div className="flex justify-between w-full items-center">
                                       <span>
                                           {new Date(slot.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(slot.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                       </span>
-                                      <Badge variant={slot.score > 8 ? "default" : "secondary"}>{slot.reason}</Badge>
+                                      {isBooking && selectedSlot?.start === slot.start ? <Loader2 className="h-4 w-4 animate-spin" /> : <Badge variant={slot.score > 8 ? "default" : "secondary"}>{slot.reason}</Badge>}
                                     </div>
                                 </Button>
                             ))
