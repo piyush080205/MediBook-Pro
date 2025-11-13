@@ -32,7 +32,7 @@ import { getInitials } from "@/lib/utils";
 // Make sure window.recaptchaVerifier is accessible
 declare global {
   interface Window {
-    recaptchaVerifier: RecaptchaVerifier;
+    recaptchaVerifier?: RecaptchaVerifier;
     confirmationResult?: ConfirmationResult;
   }
 }
@@ -49,7 +49,7 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export function AuthModal({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState("initial"); // 'initial', 'otp', 'loading'
+  const [step, setStep] = useState("initial"); // 'initial', 'phone', 'otp', 'loading'
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -57,11 +57,10 @@ export function AuthModal({ children }: { children: React.ReactNode }) {
 
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
 
-  // Effect to set up reCAPTCHA
+  // Effect to set up and clean up reCAPTCHA
   useEffect(() => {
-    if (!open || !auth || step !== "phone" || window.recaptchaVerifier) return;
-
-    if (recaptchaContainerRef.current) {
+    if (open && auth && step === "phone" && !window.recaptchaVerifier) {
+      if (recaptchaContainerRef.current) {
         // Ensure the container is empty before rendering
         recaptchaContainerRef.current.innerHTML = '';
         const verifier = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
@@ -75,11 +74,21 @@ export function AuthModal({ children }: { children: React.ReactNode }) {
                 description: "Please solve the reCAPTCHA again.",
                 variant: "destructive",
             });
+            window.recaptchaVerifier?.clear();
           },
         });
         window.recaptchaVerifier = verifier;
         verifier.render();
+      }
     }
+
+    // Return a cleanup function
+    return () => {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = undefined;
+      }
+    };
   }, [open, auth, step]);
 
 
@@ -195,9 +204,6 @@ export function AuthModal({ children }: { children: React.ReactNode }) {
   // Cleanup on modal close
   useEffect(() => {
     if (!open) {
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-      }
       setStep("initial");
       setPhoneNumber("");
       setOtp("");
