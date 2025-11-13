@@ -58,13 +58,33 @@ const getClinicStatsFlow = ai.defineFlow(
     inputSchema: ClinicStatsInputSchema,
     outputSchema: ClinicStatsOutputSchema,
   },
-  async (input) => {
-     const now = new Date();
-    const {output} = await prompt({
-        ...input,
-        // Pass the current time to the prompt context for more realistic simulation
-        time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    });
-    return output!;
+  async (input, streamingCallback) => {
+    const maxRetries = 3;
+    let attempt = 0;
+    const now = new Date();
+    const promptInput = {
+      ...input,
+      time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    while (attempt < maxRetries) {
+      try {
+        const {output} = await prompt(promptInput);
+        return output!;
+      } catch (error: any) {
+        attempt++;
+        if (error.message.includes('503') && attempt < maxRetries) {
+          if (streamingCallback) {
+             await streamingCallback({
+              custom: `Model is overloaded, retrying... (Attempt ${attempt}/${maxRetries})`,
+            });
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Wait longer each time
+        } else {
+          throw error;
+        }
+      }
+    }
+    throw new Error('Failed to get a response from the model after multiple retries.');
   }
 );
