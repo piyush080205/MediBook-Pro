@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,8 @@ import {
 } from "firebase/auth";
 import { useAuth } from "@/firebase";
 
+// Store instances on window to preserve them across re-renders,
+// especially in development with React's Strict Mode.
 declare global {
   interface Window {
     recaptchaVerifier?: RecaptchaVerifier;
@@ -37,28 +40,59 @@ export function AuthModal() {
   const [isSending, setIsSending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const auth = useAuth();
+  
+  // Use a ref for the container to ensure it's available.
+  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
+
+  const cleanupRecaptcha = () => {
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
+    }
+  };
 
   const setupRecaptcha = useCallback(() => {
-    if (auth && !window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-        size: "invisible",
-        callback: () => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-          setIsSending(false);
-        },
-      });
+    if (!auth || !recaptchaContainerRef.current) return;
+    
+    cleanupRecaptcha(); // Clean up any old instance first
+
+    try {
+        const verifier = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
+          size: "invisible",
+          callback: () => {
+            // This callback is called when the reCAPTCHA is successfully solved.
+            // The user does not need to do anything.
+          },
+          'expired-callback': () => {
+            // Response expired. Ask user to solve reCAPTCHA again.
+            toast({
+                title: "reCAPTCHA Expired",
+                description: "Please try sending the OTP again.",
+                variant: "destructive"
+            });
+            setIsSending(false);
+          }
+        });
+        window.recaptchaVerifier = verifier;
+    } catch(error) {
+        console.error("reCAPTCHA initialization error:", error);
+        toast({
+            title: "Could not initialize reCAPTCHA",
+            description: "Please check your internet connection and try again.",
+            variant: "destructive"
+        });
     }
   }, [auth]);
 
   useEffect(() => {
     if (open) {
-      // Delay setup to ensure modal is visible and DOM element exists
-      setTimeout(() => {
-         if (document.getElementById("recaptcha-container")) {
-            setupRecaptcha();
-         }
-      }, 100);
+      // Setup reCAPTCHA once the modal is open and the container is rendered.
+      setupRecaptcha();
+    } else {
+      // Clean up when the modal is closed.
+      cleanupRecaptcha();
     }
+    // Cleanup on component unmount
+    return () => cleanupRecaptcha();
   }, [open, setupRecaptcha]);
 
   const handleSendOtp = async () => {
@@ -67,7 +101,8 @@ export function AuthModal() {
       return;
     }
     if (!window.recaptchaVerifier) {
-        toast({ title: "reCAPTCHA not initialized", description: "Please try again in a moment.", variant: "destructive" });
+        toast({ title: "reCAPTCHA not ready", description: "Please wait a moment and try again.", variant: "destructive" });
+        setupRecaptcha(); // Try to set it up again
         return;
     }
     
@@ -83,11 +118,21 @@ export function AuthModal() {
       toast({ title: "OTP Sent", description: `An OTP has been sent to ${phoneNumber}.` });
     } catch (error: any) {
       console.error("Error sending OTP:", error);
-      toast({
-        title: "Failed to send OTP",
-        description: error.message || "Please check the phone number and try again.",
-        variant: "destructive",
-      });
+       if (error.code === 'auth/operation-not-allowed') {
+           toast({
+                title: "Authentication Error",
+                description: "Phone number sign-in is not enabled or the domain is not authorized. Please check your Firebase project settings.",
+                variant: "destructive",
+            });
+       } else {
+            toast({
+                title: "Failed to send OTP",
+                description: error.message || "Please check the phone number and try again.",
+                variant: "destructive",
+            });
+       }
+       // Reset reCAPTCHA for the next attempt
+       setupRecaptcha();
     } finally {
       setIsSending(false);
     }
@@ -127,6 +172,7 @@ export function AuthModal() {
     setOtp("");
     setIsSending(false);
     setIsVerifying(false);
+    cleanupRecaptcha();
   }
 
   return (
@@ -203,14 +249,19 @@ export function AuthModal() {
                 ) : null}
                 Verify OTP & Login
               </Button>
-               <Button variant="link" size="sm" onClick={() => setStep('phone')}>
+               <Button variant="link" size="sm" onClick={() => {
+                   setStep('phone');
+                   setupRecaptcha();
+               }}>
                 Change phone number
               </Button>
             </>
           )}
         </DialogFooter>
-         <div id="recaptcha-container"></div>
+         <div ref={recaptchaContainerRef}></div>
       </DialogContent>
     </Dialog>
   );
 }
+
+    
