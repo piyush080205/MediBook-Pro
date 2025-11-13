@@ -23,7 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Stethoscope, Sparkles, Loader2, Activity, ArrowRightCircle, ShieldAlert, HeartPulse, HelpCircle, Mic, MicOff, Square } from 'lucide-react';
+import { Stethoscope, Sparkles, Loader2, Activity, ArrowRightCircle, ShieldAlert, HeartPulse, HelpCircle, Mic, MicOff, Square, Ear } from 'lucide-react';
 import { runSmartTriage, runTextToSpeech } from '@/app/actions';
 import { toast } from '@/hooks/use-toast';
 import type { SmartTriageOutput } from '@/ai/flows/smart-triage-engine';
@@ -43,19 +43,22 @@ const triageFormSchema = z.object({
   chronicFlags: z.string().optional(),
 });
 
+type ConversationState = 'idle' | 'listening_symptoms' | 'listening_for_booking_confirmation';
+
 const LAST_TRIAGE_RESULT_KEY = 'lastTriageResult';
 
 export default function TriagePage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
+  const [conversationState, setConversationState] = useState<ConversationState>('idle');
   const [triageResult, setTriageResult] = useState<SmartTriageOutput | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const isListening = conversationState !== 'idle';
+
   useEffect(() => {
-    // Check for SpeechRecognition API
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       recognitionRef.current = new SpeechRecognition();
@@ -64,11 +67,24 @@ export default function TriagePage() {
       recognitionRef.current.lang = 'en-US';
 
       recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        form.setValue('symptoms', transcript);
-        setIsListening(false);
-        // Automatically submit the form after getting the transcript
-        form.handleSubmit(onSubmit)();
+        const transcript = event.results[0][0].transcript.toLowerCase();
+        
+        if (conversationState === 'listening_symptoms') {
+          form.setValue('symptoms', transcript);
+          // Automatically submit the form after getting the transcript
+          form.handleSubmit(onSubmit)();
+        } else if (conversationState === 'listening_for_booking_confirmation') {
+          if (transcript.includes('yes')) {
+            toast({ title: "Taking you to the doctor listing..."});
+            if (triageResult?.recommendedSpecialty) {
+               router.push(`/doctors?specialty=${triageResult.recommendedSpecialty}`);
+            }
+          } else {
+             toast({ title: "Okay, feel free to start over."});
+             resetForm();
+          }
+        }
+        setConversationState('idle');
       };
       
       recognitionRef.current.onerror = (event: any) => {
@@ -78,18 +94,18 @@ export default function TriagePage() {
             description: 'Could not connect to the voice recognition service. Please check your internet connection and try again.',
             variant: 'destructive',
           });
-        } else {
+        } else if (event.error !== 'aborted') {
           toast({
             title: 'Voice Error',
             description: `Could not recognize speech: ${event.error}. Please try again.`,
             variant: 'destructive',
           });
         }
-        setIsListening(false);
+        setConversationState('idle');
       };
 
        recognitionRef.current.onend = () => {
-         setIsListening(false);
+         setConversationState(current => (current === 'listening_symptoms' || current === 'listening_for_booking_confirmation') ? 'idle' : current);
        };
 
     }
@@ -109,7 +125,7 @@ export default function TriagePage() {
       window.removeEventListener('offline', updateOnlineStatus);
       if (recognitionRef.current) recognitionRef.current.abort();
     };
-  }, []);
+  }, [conversationState, form, router, triageResult]);
 
   const form = useForm<z.infer<typeof triageFormSchema>>({
     resolver: zodResolver(triageFormSchema),
@@ -120,16 +136,20 @@ export default function TriagePage() {
     },
   });
 
-  const speakResult = async (text: string) => {
+  const speakResult = async (text: string, onEnd?: () => void) => {
     try {
       const { audio: audioDataUri } = await runTextToSpeech(text);
       if (audioRef.current) {
         audioRef.current.src = audioDataUri;
         audioRef.current.play();
+        audioRef.current.onended = () => {
+          if(onEnd) onEnd();
+        }
       }
     } catch (error) {
       console.error('Text-to-speech failed:', error);
       toast({ title: "Could not generate audio", variant: "destructive" });
+      if(onEnd) onEnd(); // Still call onEnd if TTS fails
     }
   }
 
@@ -149,14 +169,26 @@ export default function TriagePage() {
       setTriageResult(result);
       localStorage.setItem(LAST_TRIAGE_RESULT_KEY, JSON.stringify(result));
       
-      // Construct a text version of the result to be spoken
       let resultText = '';
+      let followUp = () => {};
+
       if(result.isQuery && result.procedureExplanation) {
         resultText = result.procedureExplanation.join(' ');
-      } else if (!result.isQuery) {
+      } else if (!result.isQuery && result.recommendedSpecialty) {
         resultText = `Based on your symptoms, the AI recommends the following. Risk Level: ${result.riskCategory}. Urgency: ${result.urgency}. Recommended Specialty: ${result.recommendedSpecialty}. ${result.suggestedNextSteps?.join(' ')}`;
+        
+        // Prepare the follow-up action
+        followUp = () => {
+            const bookingQuestion = `Would you like me to find a ${result.recommendedSpecialty} for you? Please say yes or no.`;
+            speakResult(bookingQuestion, () => {
+                 if (recognitionRef.current) {
+                    setConversationState('listening_for_booking_confirmation');
+                    recognitionRef.current.start();
+                }
+            });
+        };
       }
-      if(resultText) speakResult(resultText);
+      if(resultText) speakResult(resultText, followUp);
 
     } catch (error) {
       toast({ title: "Analysis Failed", description: "An error occurred. Please try again.", variant: "destructive" });
@@ -173,12 +205,11 @@ export default function TriagePage() {
     }
     if (isListening) {
       recognitionRef.current.stop();
-      setIsListening(false);
+      setConversationState('idle');
     } else {
-      form.reset();
-      setTriageResult(null);
+      resetForm();
+      setConversationState('listening_symptoms');
       recognitionRef.current.start();
-      setIsListening(true);
     }
   };
 
@@ -290,10 +321,20 @@ export default function TriagePage() {
                 </div>
             )}
 
+            {conversationState === 'listening_for_booking_confirmation' && (
+                <Alert className="mt-4 border-primary">
+                    <Ear className="h-4 w-4" />
+                    <AlertTitle>Listening...</AlertTitle>
+                    <AlertDescription>
+                        Listening for "yes" or "no".
+                    </AlertDescription>
+                </Alert>
+            )}
+
             <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                <Button variant="ghost" onClick={resetForm} disabled={!isOnline}>Start Over</Button>
+                <Button variant="ghost" onClick={resetForm} disabled={!isOnline || isListening}>Start Over</Button>
                 {triageResult.recommendedSpecialty && (
-                    <Button onClick={() => router.push(`/doctors?specialty=${triageResult.recommendedSpecialty}`)} className="flex-1" disabled={!isOnline}>
+                    <Button onClick={() => router.push(`/doctors?specialty=${triageResult.recommendedSpecialty}`)} className="flex-1" disabled={!isOnline || isListening}>
                         Find a {triageResult.recommendedSpecialty}
                     </Button>
                 )}
@@ -333,7 +374,7 @@ export default function TriagePage() {
                             </AlertDescription>
                         </Alert>
                     )}
-                    {isListening ? (
+                    {conversationState === 'listening_symptoms' ? (
                          <div className="text-center p-8 space-y-4">
                             <Mic className="h-12 w-12 mx-auto text-primary animate-pulse" />
                             <p className="font-medium text-muted-foreground">Listening... Please state your symptoms.</p>
@@ -444,5 +485,3 @@ export default function TriagePage() {
     </div>
   );
 }
-
-    
