@@ -1,0 +1,551 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the MediBook Pro application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The user's phone number, used for authentication."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address (optional).",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role within the system (e.g., 'patient', 'admin')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when the user account was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "phone",
+        "role",
+        "createdAt"
+      ]
+    },
+    "Doctor": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Doctor",
+      "type": "object",
+      "description": "Represents a doctor in the MediBook Pro application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Doctor entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The doctor's full name."
+        },
+        "specialties": {
+          "type": "array",
+          "description": "An array of medical specialties the doctor practices.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "qualifications": {
+          "type": "string",
+          "description": "The doctor's professional qualifications."
+        },
+        "yearsExperience": {
+          "type": "number",
+          "description": "The number of years of experience the doctor has."
+        },
+        "ratingsAvg": {
+          "type": "number",
+          "description": "The average rating given to the doctor."
+        },
+        "ratingsCount": {
+          "type": "number",
+          "description": "The total number of ratings received by the doctor."
+        },
+        "fees": {
+          "type": "number",
+          "description": "The doctor's consultation fees."
+        },
+        "clinicIds": {
+          "type": "array",
+          "description": "References to Clinics. (Relationship: Doctor 1:N Clinic)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "locationLat": {
+          "type": "number",
+          "description": "The doctors's location latitude"
+        },
+        "locationLng": {
+          "type": "number",
+          "description": "The doctors's location longitude"
+        },
+        "address": {
+          "type": "string",
+          "description": "The doctor's office address."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "specialties",
+        "qualifications",
+        "yearsExperience",
+        "ratingsAvg",
+        "ratingsCount",
+        "fees",
+        "locationLat",
+        "locationLng",
+        "address"
+      ]
+    },
+    "Clinic": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Clinic",
+      "type": "object",
+      "description": "Represents a clinic in the MediBook Pro application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Clinic entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the clinic."
+        },
+        "locationLat": {
+          "type": "number",
+          "description": "The clinics's location latitude"
+        },
+        "locationLng": {
+          "type": "number",
+          "description": "The clinics's location longitude"
+        },
+        "address": {
+          "type": "string",
+          "description": "The clinic's address."
+        },
+        "contactNumber": {
+          "type": "string",
+          "description": "The clinic's contact phone number."
+        },
+        "schedule": {
+          "type": "array",
+          "description": "The clinic's operating schedule (array of objects with dayOfWeek, start, and end times).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "capacity": {
+          "type": "number",
+          "description": "The clinic's patient capacity."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "locationLat",
+        "locationLng",
+        "address",
+        "contactNumber",
+        "schedule",
+        "capacity"
+      ]
+    },
+    "Appointment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Appointment",
+      "type": "object",
+      "description": "Represents an appointment booked in the MediBook Pro application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Appointment entity."
+        },
+        "patientId": {
+          "type": "string",
+          "description": "Reference to User (Patient). (Relationship: User 1:N Appointment)"
+        },
+        "doctorId": {
+          "type": "string",
+          "description": "Reference to Doctor. (Relationship: Doctor 1:N Appointment)"
+        },
+        "clinicId": {
+          "type": "string",
+          "description": "Reference to Clinic. (Relationship: Clinic 1:N Appointment)"
+        },
+        "slotStart": {
+          "type": "string",
+          "description": "The start time of the appointment slot.",
+          "format": "date-time"
+        },
+        "slotEnd": {
+          "type": "string",
+          "description": "The end time of the appointment slot.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the appointment (e.g., 'booked', 'cancelled', 'completed')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when the appointment was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "patientId",
+        "doctorId",
+        "clinicId",
+        "slotStart",
+        "slotEnd",
+        "status",
+        "createdAt"
+      ]
+    },
+    "TriageLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TriageLog",
+      "type": "object",
+      "description": "Represents a log entry for a triage assessment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the TriageLog entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N TriageLog). Nullable, as triage might be performed without a logged-in user."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The timestamp when the triage assessment was performed.",
+          "format": "date-time"
+        },
+        "symptoms": {
+          "type": "array",
+          "description": "An array of symptoms reported by the user.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "age": {
+          "type": "number",
+          "description": "The age of the user (optional)."
+        },
+        "gender": {
+          "type": "string",
+          "description": "The gender of the user (optional)."
+        },
+        "recommendedSpecialty": {
+          "type": "string",
+          "description": "The specialty recommended by the triage engine."
+        },
+        "urgency": {
+          "type": "string",
+          "description": "The urgency level determined by the triage engine."
+        },
+        "confidence": {
+          "type": "number",
+          "description": "The confidence level of the triage engine's recommendation."
+        },
+        "suggestedNextSteps": {
+          "type": "array",
+          "description": "An array of suggested next steps for the user.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "timestamp",
+        "symptoms",
+        "recommendedSpecialty",
+        "urgency",
+        "confidence",
+        "suggestedNextSteps"
+      ]
+    },
+    "SlotOptimizationLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SlotOptimizationLog",
+      "type": "object",
+      "description": "Represents a log entry for slot optimization.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SlotOptimizationLog entity."
+        },
+        "doctorId": {
+          "type": "string",
+          "description": "Reference to Doctor. (Relationship: Doctor 1:N SlotOptimizationLog)"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The timestamp when the slot optimization was performed.",
+          "format": "date-time"
+        },
+        "dateRangeFrom": {
+          "type": "string",
+          "description": "The start of the date range for slot optimization.",
+          "format": "date-time"
+        },
+        "dateRangeTo": {
+          "type": "string",
+          "description": "The end of the date range for slot optimization.",
+          "format": "date-time"
+        },
+        "patientPreferencesEarliestTime": {
+          "type": "string",
+          "description": "The patient's earliest preferred time for the appointment (optional).",
+          "format": "date-time"
+        },
+        "patientPreferencesLatestTime": {
+          "type": "string",
+          "description": "The patient's latest preferred time for the appointment (optional).",
+          "format": "date-time"
+        },
+        "bestSlots": {
+          "type": "array",
+          "description": "An array of the best slots recommended by the optimizer.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "doctorId",
+        "timestamp",
+        "dateRangeFrom",
+        "dateRangeTo",
+        "bestSlots"
+      ]
+    },
+    "QueueHistory": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "QueueHistory",
+      "type": "object",
+      "description": "Represents a historical record of clinic queue data.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the QueueHistory entity."
+        },
+        "clinicId": {
+          "type": "string",
+          "description": "Reference to Clinic. (Relationship: Clinic 1:N QueueHistory)"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The timestamp of the queue data record.",
+          "format": "date-time"
+        },
+        "patientsAhead": {
+          "type": "number",
+          "description": "The number of patients ahead in the queue."
+        },
+        "estimatedWaitMinutes": {
+          "type": "number",
+          "description": "The estimated wait time in minutes."
+        }
+      },
+      "required": [
+        "id",
+        "clinicId",
+        "timestamp",
+        "patientsAhead",
+        "estimatedWaitMinutes"
+      ]
+    },
+    "OtpCache": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "OtpCache",
+      "type": "object",
+      "description": "Represents a short-lived OTP record for phone verification.",
+      "properties": {
+        "phone": {
+          "type": "string",
+          "description": "The phone number associated with the OTP."
+        },
+        "otp": {
+          "type": "string",
+          "description": "The one-time password."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when the OTP was generated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "phone",
+        "otp",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information. The 'userId' parameter identifies the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/doctors/{doctorId}",
+        "definition": {
+          "entityName": "Doctor",
+          "schema": {
+            "$ref": "#/backend/entities/Doctor"
+          },
+          "description": "Stores doctor profile information. The 'doctorId' parameter identifies the doctor.",
+          "params": [
+            {
+              "name": "doctorId",
+              "description": "The unique identifier for the doctor."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clinics/{clinicId}",
+        "definition": {
+          "entityName": "Clinic",
+          "schema": {
+            "$ref": "#/backend/entities/Clinic"
+          },
+          "description": "Stores clinic information. The 'clinicId' parameter identifies the clinic.",
+          "params": [
+            {
+              "name": "clinicId",
+              "description": "The unique identifier for the clinic."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/appointments/{appointmentId}",
+        "definition": {
+          "entityName": "Appointment",
+          "schema": {
+            "$ref": "#/backend/entities/Appointment"
+          },
+          "description": "Stores appointment information for a specific user. The 'userId' parameter identifies the user, and the 'appointmentId' parameter identifies the appointment.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "appointmentId",
+              "description": "The unique identifier for the appointment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/triage_logs/{triageLogId}",
+        "definition": {
+          "entityName": "TriageLog",
+          "schema": {
+            "$ref": "#/backend/entities/TriageLog"
+          },
+          "description": "Stores triage log entries. The 'triageLogId' parameter identifies the triage log entry.",
+          "params": [
+            {
+              "name": "triageLogId",
+              "description": "The unique identifier for the triage log entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/slot_optimization_logs/{slotOptimizationLogId}",
+        "definition": {
+          "entityName": "SlotOptimizationLog",
+          "schema": {
+            "$ref": "#/backend/entities/SlotOptimizationLog"
+          },
+          "description": "Stores slot optimization log entries. The 'slotOptimizationLogId' parameter identifies the slot optimization log entry.",
+          "params": [
+            {
+              "name": "slotOptimizationLogId",
+              "description": "The unique identifier for the slot optimization log entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/queue_history/{queueHistoryId}",
+        "definition": {
+          "entityName": "QueueHistory",
+          "schema": {
+            "$ref": "#/backend/entities/QueueHistory"
+          },
+          "description": "Stores queue history entries. The 'queueHistoryId' parameter identifies the queue history entry.",
+          "params": [
+            {
+              "name": "queueHistoryId",
+              "description": "The unique identifier for the queue history entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/otp_cache/{phone}",
+        "definition": {
+          "entityName": "OtpCache",
+          "schema": {
+            "$ref": "#/backend/entities/OtpCache"
+          },
+          "description": "Stores OTP (One-Time Password) entries for phone verification. The 'phone' parameter identifies the phone number associated with the OTP. This collection's purpose is for storing short-lived OTPs and should be handled with appropriate security considerations and TTL (Time-To-Live).",
+          "params": [
+            {
+              "name": "phone",
+              "description": "The phone number associated with the OTP."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the MediBook Pro application's features, emphasizing security, scalability, and ease of debugging.  The structure uses path-based ownership for private user data and membership maps for collaborative data.  Authorization Independence is achieved through denormalization, avoiding `get()` calls in security rules. Structural Segregation ensures collections contain documents with homogeneous security needs. This architecture supports secure `list` operations (QAPs).  Specifically, user-owned data like appointments are nested under the `/users/{userId}` path, ensuring that only the user can access their data. Doctor and Clinic information is stored in top-level collections for easy querying. Triage logs are stored under the `/triage_logs` collection without user association to accommodate triage assessment without logged-in user. OtpCache will be stored in `/otp_cache` collection."
+  }
+}
