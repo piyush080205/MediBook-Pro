@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -56,6 +57,7 @@ export function TriageModal() {
     resolver: zodResolver(triageFormSchema),
     defaultValues: {
       symptoms: "",
+      age: undefined,
     },
   });
 
@@ -141,7 +143,7 @@ export function TriageModal() {
                     <FormItem>
                       <FormLabel>Age (Optional)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 35" {...field} />
+                        <Input type="number" placeholder="e.g., 35" {...field} value={field.value ?? ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
