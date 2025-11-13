@@ -1,11 +1,25 @@
+"use client";
+
 import Link from "next/link";
-import { Stethoscope, LogIn, Menu } from "lucide-react";
+import { Stethoscope, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
+import { useAuth, useUser } from "@/firebase";
+import { AuthModal } from "@/components/auth/AuthModal";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { getInitials } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navLinks = [
     { href: "/", label: "Home" },
@@ -14,6 +28,13 @@ const navLinks = [
 ]
 
 export default function Header() {
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+
+  const handleLogout = async () => {
+    await auth.signOut();
+  };
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-card">
       <div className="container mx-auto flex h-16 items-center px-4 md:px-6">
@@ -31,11 +52,36 @@ export default function Header() {
           ))}
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-4">
-          <Button asChild>
-            <Link href="/login">
-              <LogIn className="mr-2 h-4 w-4" /> Login
-            </Link>
-          </Button>
+          {!isUserLoading && (
+            user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback>{user.phoneNumber ? getInitials(user.phoneNumber) : 'U'}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">My Account</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.phoneNumber}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <AuthModal />
+            )
+          )}
         </div>
         <div className="md:hidden ml-4">
            <Sheet>
