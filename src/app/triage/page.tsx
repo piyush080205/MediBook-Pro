@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -71,8 +72,19 @@ export default function TriagePage() {
       };
       
       recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error', event.error);
-        toast({ title: 'Voice Error', description: `Could not recognize speech: ${event.error}`, variant: 'destructive' });
+        if (event.error === 'network') {
+          toast({
+            title: 'Voice Service Unavailable',
+            description: 'Could not connect to the voice recognition service. Please check your internet connection and try again.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Voice Error',
+            description: `Could not recognize speech: ${event.error}. Please try again.`,
+            variant: 'destructive',
+          });
+        }
         setIsListening(false);
       };
 
@@ -432,3 +444,5 @@ export default function TriagePage() {
     </div>
   );
 }
+
+    
