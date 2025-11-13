@@ -19,6 +19,7 @@ import { useGeolocation } from '@/hooks/use-geolocation';
 import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Separator } from '../ui/separator';
+import { runSendSms } from '@/app/actions';
 
 // Function to calculate distance between two lat/lng points in km
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -40,6 +41,8 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
 type EmergencyRoomWithDistance = EmergencyRoom & { distance?: number };
 
 const ICE_CONTACT = "112"; // Pan-India Emergency Number
+const PREDEFINED_EMERGENCY_CONTACT = "+919876543210"; // Placeholder for user's emergency contact
+
 const WAITING_INSTRUCTIONS = [
     "If it's safe, stay where you are.",
     "Try to remain calm and breathe slowly.",
@@ -73,6 +76,37 @@ export default function EmergencyFeature() {
             setSelectedER(sortedEmergencyRooms[0]);
         }
     }, [sortedEmergencyRooms, selectedER]);
+    
+    const handleActivateEmergencyMode = async () => {
+        setIsEmergencyModeActive(true);
+        if (!coordinates) {
+            toast({
+                title: "Location Not Available",
+                description: "Cannot send emergency alert without your location. Please enable location services.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const locationUrl = `https://www.google.com/maps?q=${coordinates.lat},${coordinates.lng}`;
+        const messageBody = `EMERGENCY! My live location is: ${locationUrl}. Please send help immediately.`;
+
+        try {
+            await runSendSms(PREDEFINED_EMERGENCY_CONTACT, messageBody);
+            toast({
+                title: "Emergency Alert Sent",
+                description: `An SMS with your location has been sent to your emergency contact.`,
+            });
+        } catch (error) {
+            console.error("Emergency SMS failed:", error);
+            toast({
+                title: "Could Not Send SMS Alert",
+                description: "There was a problem sending the emergency alert. Please call for help manually.",
+                variant: "destructive",
+            });
+        }
+    };
+
 
     const handleShareLocation = () => {
         if (!coordinates) {
@@ -119,7 +153,7 @@ export default function EmergencyFeature() {
                     />
                 </div>
                 <div className="flex flex-col gap-4 overflow-y-auto pr-2">
-                    <Button size="lg" variant="destructive" onClick={() => setIsEmergencyModeActive(true)} className="w-full">
+                    <Button size="lg" variant="destructive" onClick={handleActivateEmergencyMode} className="w-full">
                         <Siren className="mr-2 h-5 w-5" /> Activate Emergency Mode
                     </Button>
                     <Separator />
@@ -170,10 +204,10 @@ export default function EmergencyFeature() {
                     <h3 className='font-bold text-lg'>Critical Actions</h3>
                     <div className='grid grid-cols-1 gap-3'>
                         <Button size="lg" className='h-16 text-lg' asChild>
-                            <a href={`tel:${ICE_CONTACT}`}><Phone className="mr-2 h-6 w-6"/> Call Emergency Contact</a>
+                            <a href={`tel:${ICE_CONTACT}`}><Phone className="mr-2 h-6 w-6"/> Call Emergency Services</a>
                         </Button>
                         <Button size="lg" className='h-16 text-lg' variant="secondary" onClick={handleShareLocation} disabled={!coordinates}>
-                            <Share2 className="mr-2 h-6 w-6"/> Share Live Location
+                            <Share2 className="mr-2 h-6 w-6"/> Manually Share Location
                         </Button>
                          {selectedER && (
                             <Button size="lg" className='h-16 text-lg' variant="outline" asChild>
@@ -221,3 +255,5 @@ export default function EmergencyFeature() {
         </Dialog>
     );
 }
+
+    
