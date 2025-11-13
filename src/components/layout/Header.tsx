@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { Stethoscope, LogOut, Menu, User as UserIcon, Sparkles, UserCog } from "lucide-react";
+import { Stethoscope, LogOut, Menu, User as UserIcon, Sparkles, UserCog, FilePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -55,6 +55,9 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
+           <Link href="/interpreter" className="transition-colors hover:text-primary flex items-center gap-2">
+                <FilePlus className="h-4 w-4"/> Document Interpreter
+            </Link>
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-2">
            <Button variant="outline" asChild>
@@ -133,6 +136,9 @@ export default function Header() {
                     {link.label}
                   </Link>
                 ))}
+                 <Link href="/interpreter" className="flex w-full items-center py-2 text-lg font-semibold">
+                    Document Interpreter
+                 </Link>
               </div>
             </SheetContent>
           </Sheet>
@@ -141,5 +147,3 @@ export default function Header() {
     </header>
   );
 }
-
-    

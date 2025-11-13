@@ -4,6 +4,7 @@ import { predictQueue, QueuePredictionInput } from "@/ai/flows/queue-prediction"
 import { optimizeSlots, OptimizeSlotsInput } from "@/ai/flows/slot-optimization-engine";
 import { smartTriage, SmartTriageInput } from "@/ai/flows/smart-triage-engine";
 import { getClinicStats, ClinicStatsInput } from "@/ai/flows/clinic-stats-engine";
+import { runDocumentInterpreter as runDocumentInterpreterFlow, DocumentInterpreterInput } from "@/ai/flows/document-interpreter-flow";
 import { sendSms } from "@/lib/sms";
 
 export async function runSmartTriage(input: SmartTriageInput) {
@@ -26,4 +27,8 @@ export async function runGetClinicStats(input: ClinicStatsInput) {
 
 export async function runSendSms(to: string, body: string) {
     return await sendSms(to, body);
+}
+
+export async function runDocumentInterpreter(input: DocumentInterpreterInput) {
+    return await runDocumentInterpreterFlow(input);
 }

@@ -99,6 +99,14 @@ service cloud.firestore {
     }
 
     /**
+     * @description Restricts write access to interpreted medical documents.
+     */
+    match /medical_documents/{docId} {
+      allow get, list: if true; // Allow reads for now, could be restricted to owners later
+      allow create, update, delete: if false; // Writes should be from a trusted backend process
+    }
+
+    /**
      * @description Restricts write access to reschedule logs.
      */
     match /reschedule_logs/{logId} {
@@ -107,5 +115,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

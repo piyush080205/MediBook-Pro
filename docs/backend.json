@@ -364,6 +364,23 @@
             "suggestedSpecialties": { "type": "array", "items": { "type": "string" } }
         }
     },
+    "MedicalDocument": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "MedicalDocument",
+        "description": "Stores the result of an AI medical document interpretation.",
+        "type": "object",
+        "properties": {
+            "id": { "type": "string" },
+            "userId": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" },
+            "documentType": { "type": "string" },
+            "summary": { "type": "string" },
+            "keyVitals": { "type": "array", "items": { "type": "object" } },
+            "abnormalReadings": { "type": "array", "items": { "type": "object" } },
+            "medications": { "type": "array", "items": { "type": "object" } },
+            "nextSteps": { "type": "array", "items": { "type": "string" } }
+        }
+    },
     "RescheduleLog": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "RescheduleLog",
@@ -456,6 +473,13 @@
         }
       },
       {
+        "path": "/medical_documents/{docId}",
+        "definition": {
+            "schema": { "$ref": "#/entities/MedicalDocument" },
+            "description": "Stores interpreted medical document results."
+        }
+      },
+      {
         "path": "/reschedule_logs/{logId}",
         "definition": {
             "schema": { "$ref": "#/entities/RescheduleLog" },
@@ -466,5 +490,3 @@
     "reasoning": "The data structure is updated to support the full Patient Safety Suite. It includes new collections for logging various operational processes like triage, load balancing, and rescheduling. Existing entities like User and Doctor are expanded with new fields (e.g., `healthWallet`, `performance`) as required by the new features. Security rules will be configured to restrict write access on log collections to backend processes, ensuring data integrity."
   }
 }
-
-    
