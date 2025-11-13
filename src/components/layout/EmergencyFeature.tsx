@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -51,7 +52,14 @@ export default function EmergencyFeature() {
             .sort((a, b) => a.distance - b.distance);
     }, [coordinates]);
     
-    const [selectedER, setSelectedER] = useState<EmergencyRoom | null>(sortedEmergencyRooms[0] || null);
+    const [selectedER, setSelectedER] = useState<EmergencyRoom | null>(null);
+
+    // Set the initially selected ER to the closest one once data is sorted
+    useMemo(() => {
+        if (sortedEmergencyRooms.length > 0) {
+            setSelectedER(sortedEmergencyRooms[0]);
+        }
+    }, [sortedEmergencyRooms]);
 
 
     return (
