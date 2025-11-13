@@ -24,11 +24,11 @@ export default function RegisterPage() {
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="name">Full Name</Label>
-            <Input id="name" type="text" placeholder="John Doe" required />
+            <Input id="name" type="text" placeholder="Aditi Sharma" required />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="phone">Phone Number</Label>
-            <Input id="phone" type="tel" placeholder="+1 (555) 000-0000" required />
+            <Input id="phone" type="tel" placeholder="+91 98765 43210" required />
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">

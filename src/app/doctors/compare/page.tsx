@@ -7,7 +7,7 @@ import type { Doctor } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star, Briefcase, DollarSign, MapPin } from 'lucide-react';
+import { Star, Briefcase, MapPin } from 'lucide-react';
 import { getInitials } from '@/lib/utils';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
@@ -100,9 +100,9 @@ export default function CompareDoctorsPage() {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-semibold flex items-center gap-2"><DollarSign className="w-4 h-4 text-green-500" /> Consultation Fee</TableCell>
+                  <TableCell className="font-semibold flex items-center gap-2"><span className="font-bold text-green-500">₹</span> Consultation Fee</TableCell>
                   {doctors.map(doctor => (
-                    <TableCell key={doctor.id} className="text-center">${doctor.fees.toFixed(2)}</TableCell>
+                    <TableCell key={doctor.id} className="text-center">₹{doctor.fees.toFixed(2)}</TableCell>
                   ))}
                 </TableRow>
                 <TableRow>

@@ -86,7 +86,7 @@ export default function DoctorsPage() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                             <Input 
                                 id="search"
-                                placeholder="e.g. Dr. Smith or New York"
+                                placeholder="e.g. Dr. Singh or Mumbai"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 className="pl-10"
