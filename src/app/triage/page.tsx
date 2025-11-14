@@ -1,21 +1,21 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Stethoscope, Sparkles, Loader2, ArrowRightCircle, ShieldAlert, Mic, Square, User, Bot } from 'lucide-react';
+import { Sparkles, Loader2, ShieldAlert, Mic, Square, User, Bot } from 'lucide-react';
 import { runSmartTriage, runTextToSpeech } from '@/app/actions';
 import { toast } from '@/hooks/use-toast';
 import type { SmartTriageOutput } from '@/ai/flows/smart-triage-engine';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import Link from 'next/link';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type Message = {
   id: string;
@@ -37,12 +37,12 @@ export default function TriagePage() {
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-
+  
   const form = useForm<z.infer<typeof chatFormSchema>>({
     resolver: zodResolver(chatFormSchema),
     defaultValues: { message: "" },
   });
-
+  
   // Scroll to bottom of chat
   useEffect(() => {
     chatContainerRef.current?.scrollTo({
@@ -64,25 +64,30 @@ export default function TriagePage() {
 
   // Speech Recognition setup
   useEffect(() => {
+    // This check ensures the code only runs in the browser
+    if (typeof window === 'undefined') return;
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-        // Silently fail if not supported. Mic button will show a toast.
+        // Silently fail if not supported. The mic button will show a toast.
         return;
     }
     
-    recognitionRef.current = new SpeechRecognition();
-    recognitionRef.current.continuous = false;
-    recognitionRef.current.interimResults = false;
-    recognitionRef.current.lang = 'en-US';
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    
+    recognitionRef.current = recognition;
 
-    recognitionRef.current.onresult = (event: any) => {
+    recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
         form.setValue('message', transcript);
-        form.handleSubmit(onSubmit)();
-        setIsListening(false);
+        // Automatically submit the form with the transcribed text
+        form.handleSubmit(onSubmit)(); 
     };
     
-    recognitionRef.current.onerror = (event: any) => {
+    recognition.onerror = (event: any) => {
         let description = `Could not recognize speech: ${event.error}. Please try again.`;
         if (event.error === 'network') {
           description = 'Could not connect to the voice recognition service. Please check your internet connection.';
@@ -93,32 +98,45 @@ export default function TriagePage() {
         setIsListening(false);
     };
 
-    recognitionRef.current.onend = () => {
+    recognition.onend = () => {
         setIsListening(false);
     };
 
-    return () => recognitionRef.current?.abort();
-  }, [form]);
-  
+    // Cleanup function to abort recognition if the component unmounts
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    };
+  }, [form]); // form is included as it's used in onresult
+
   // Text-to-speech for AI messages
   useEffect(() => {
     const latestMessage = messages[messages.length - 1];
-    if (latestMessage?.sender === 'ai' && typeof latestMessage.content === 'string' && !latestMessage.isSpoken) {
-      speak(latestMessage.content, () => {
-        // Mark as spoken
-        setMessages(prev => prev.map(m => m.id === latestMessage.id ? {...m, isSpoken: true} : m));
+    let spokenTriageResult = false;
+    if (latestMessage?.sender === 'ai' && !latestMessage.isSpoken) {
+      const contentToSpeak = typeof latestMessage.content === 'string' 
+        ? latestMessage.content 
+        : (latestMessage.triageResult?.explanation?.join(' ') || '');
+      
+      if(contentToSpeak) {
+        speak(contentToSpeak, () => {
+          // Mark as spoken
+          setMessages(prev => prev.map(m => m.id === latestMessage.id ? {...m, isSpoken: true} : m));
 
-        // If it was a triage result, ask to book appointment
-        if (latestMessage.triageResult && !latestMessage.triageResult.isQuery) {
-          const bookingQuestion = `Would you like me to find a ${latestMessage.triageResult.recommendedSpecialty} for you?`;
-          const bookingMessage: Message = {
-            id: latestMessage.id + '-followup',
-            sender: 'ai',
-            content: bookingQuestion
-          };
-          setMessages(prev => [...prev, bookingMessage]);
-        }
-      });
+          // If it was a triage result (and not a query), ask to book appointment
+          if (latestMessage.triageResult && !latestMessage.triageResult.isQuery && !spokenTriageResult) {
+            spokenTriageResult = true; // prevent multiple triggers
+            const bookingQuestion = `Would you like me to find a ${latestMessage.triageResult.recommendedSpecialty} for you?`;
+            const bookingMessage: Message = {
+              id: latestMessage.id + '-followup',
+              sender: 'ai',
+              content: bookingQuestion
+            };
+            setMessages(prev => [...prev, bookingMessage]);
+          }
+        });
+      }
     }
   }, [messages]);
 
@@ -148,6 +166,17 @@ export default function TriagePage() {
     setIsLoading(true);
 
     try {
+      // Handle navigation based on "yes" response
+      const lastMessage = messages[messages.length - 1];
+      if (values.message.toLowerCase().includes('yes') && lastMessage?.content.toString().includes('find a')) {
+        const lastAiMessage = messages.slice().reverse().find(m => m.sender === 'ai' && m.triageResult);
+        if (lastAiMessage && lastAiMessage.triageResult?.recommendedSpecialty) {
+          router.push(`/doctors?specialty=${lastAiMessage.triageResult.recommendedSpecialty}`);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const result = await runSmartTriage({
           symptoms: values.message.split(/\s*,\s*|\s+and\s+/i), // Split by comma or 'and'
       });
@@ -166,13 +195,6 @@ export default function TriagePage() {
       };
 
       setMessages(prev => [...prev, aiMessage]);
-
-      if (values.message.toLowerCase().includes('yes') && messages[messages.length-1]?.content.toString().includes('find a')) {
-        const lastAiMessage = messages.find(m => m.id.endsWith('-ai'));
-        if (lastAiMessage && lastAiMessage.triageResult?.recommendedSpecialty) {
-          router.push(`/doctors?specialty=${lastAiMessage.triageResult.recommendedSpecialty}`);
-        }
-      }
 
     } catch (error) {
       const errorMessage: Message = {
@@ -195,8 +217,8 @@ export default function TriagePage() {
     if (isListening) {
       recognitionRef.current.stop();
     } else {
-      recognitionRef.current.start();
       setIsListening(true);
+      recognitionRef.current.start();
     }
   };
 
@@ -214,7 +236,7 @@ export default function TriagePage() {
                     This AI is for informational purposes and is not a substitute for professional medical advice.
                 </CardDescription>
             </CardHeader>
-            <CardContent ref={chatContainerRef} className="flex-1 overflow-y-auto pr-2 space-y-6">
+            <CardContent ref={chatContainerRef} className="flex-1 overflow-y-auto pr-2 space-y-6 p-4">
                 {messages.map((message) => (
                   <div key={message.id} className={cn("flex items-end gap-3", message.sender === 'user' ? 'justify-end' : 'justify-start')}>
                      {message.sender === 'ai' && (
@@ -245,7 +267,12 @@ export default function TriagePage() {
             </CardContent>
             <div className="p-4 border-t">
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center gap-2">
-                    <Input {...form.register('message')} placeholder="Type your symptoms or ask a question..." autoComplete='off' disabled={isLoading || isListening} />
+                    <Input 
+                        {...form.register('message')} 
+                        placeholder={isListening ? "Listening..." : "Type your symptoms or ask a question..."} 
+                        autoComplete='off' 
+                        disabled={isLoading || isListening} 
+                    />
                     <Button type="button" size="icon" variant={isListening ? 'destructive' : 'secondary'} onClick={handleMicClick} disabled={isLoading}>
                         {isListening ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                     </Button>
@@ -311,7 +338,7 @@ function ProcedureExplanation({ procedure }: { procedure?: string[] }) {
                     <li key={i}>{step}</li>
                 ))}
             </ul>
-             <Alert variant="destructive" className="mt-2">
+             <Alert variant="destructive" className="mt-4">
                 <ShieldAlert className="h-4 w-4" />
                 <AlertDescription>
                     This is for informational purposes. Always consult a medical professional for serious injuries.
@@ -320,3 +347,5 @@ function ProcedureExplanation({ procedure }: { procedure?: string[] }) {
         </div>
     )
 }
+
+    
