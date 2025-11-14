@@ -55,32 +55,52 @@ const textToSpeechFlow = ai.defineFlow(
     inputSchema: TextToSpeechInputSchema,
     outputSchema: TextToSpeechOutputSchema,
   },
-  async (query) => {
-    const { media } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash-preview-tts'),
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' }, // A calm, clear voice
+  async (query, streamingCallback) => {
+    const maxRetries = 3;
+    let attempt = 0;
+    
+    while(attempt < maxRetries) {
+      try {
+        const { media } = await ai.generate({
+          model: googleAI.model('gemini-2.5-flash-preview-tts'),
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Algenib' }, // A calm, clear voice
+              },
+            },
           },
-        },
-      },
-      prompt: query,
-    });
+          prompt: query,
+        });
 
-    if (!media) {
-      throw new Error('No audio media was generated.');
+        if (!media) {
+          throw new Error('No audio media was generated.');
+        }
+
+        const audioBuffer = Buffer.from(
+          media.url.substring(media.url.indexOf(',') + 1),
+          'base64'
+        );
+        const wavBase64 = await toWav(audioBuffer);
+
+        return {
+          audio: 'data:audio/wav;base64,' + wavBase64,
+        };
+      } catch (error: any) {
+        attempt++;
+        if (error.message.includes('429') && attempt < maxRetries) {
+          if (streamingCallback) {
+             await streamingCallback({
+              custom: `Model is overloaded, retrying... (Attempt ${attempt}/${maxRetries})`,
+            });
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        } else {
+          throw error;
+        }
+      }
     }
-
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    const wavBase64 = await toWav(audioBuffer);
-
-    return {
-      audio: 'data:audio/wav;base64,' + wavBase64,
-    };
+    throw new Error('Failed to get a response from the TTS model after multiple retries.');
   }
 );
