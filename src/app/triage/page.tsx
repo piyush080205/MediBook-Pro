@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, Loader2, ShieldAlert, Mic, Square, User, Bot } from 'lucide-react';
+import { Sparkles, Loader2, ShieldAlert, Mic, Square, User, Bot, Volume2, Play } from 'lucide-react';
 import { runSmartTriage, runTextToSpeech } from '@/app/actions';
 import { toast } from '@/hooks/use-toast';
 import type { SmartTriageOutput } from '@/ai/flows/smart-triage-engine';
@@ -21,8 +21,8 @@ type Message = {
   id: string;
   sender: 'user' | 'ai';
   content: React.ReactNode;
-  isSpoken?: boolean;
   triageResult?: SmartTriageOutput | null;
+  audioContent?: string;
 };
 
 const chatFormSchema = z.object({
@@ -33,6 +33,7 @@ export default function TriagePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [audioPlaybackState, setAudioPlaybackState] = useState<'playing' | 'stopped'>('stopped');
   const router = useRouter();
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -43,7 +44,6 @@ export default function TriagePage() {
     defaultValues: { message: "" },
   });
   
-  // Scroll to bottom of chat
   useEffect(() => {
     chatContainerRef.current?.scrollTo({
         top: chatContainerRef.current.scrollHeight,
@@ -51,7 +51,6 @@ export default function TriagePage() {
     });
   }, [messages]);
 
-  // Welcome message
   useEffect(() => {
     setMessages([
       {
@@ -62,41 +61,54 @@ export default function TriagePage() {
     ])
   }, []);
 
-  // Speech Recognition setup
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.SpeechRecognition && !window.webkitSpeechRecognition) {
-      return;
+    // Request microphone permission on page load
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        // We don't need to do anything with the stream, just having it confirms permission.
+        // We can immediately stop the tracks to turn off the microphone indicator.
+        stream.getTracks().forEach(track => track.stop());
+        console.log("Microphone permission granted.");
+      })
+      .catch(err => {
+        toast({
+            title: "Microphone Access Denied",
+            description: "To use voice commands, please enable microphone access in your browser settings.",
+            variant: "destructive"
+        });
+        console.error("Microphone permission error:", err);
+      });
+      
+    if (typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition)) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      recognitionRef.current = recognition;
+
+      recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          form.setValue('message', transcript);
+          form.handleSubmit(onSubmit)(); 
+      };
+      
+      recognition.onerror = (event: any) => {
+          let description = `Could not recognize speech: ${event.error}. Please try again.`;
+          if (event.error === 'network') {
+            description = 'Could not connect to the voice recognition service. Please check your internet connection.';
+          } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            description = 'Microphone access was denied. Please enable it in your browser settings.';
+          }
+          toast({ title: 'Voice Error', description, variant: 'destructive' });
+          setIsListening(false);
+      };
+
+      recognition.onend = () => {
+          setIsListening(false);
+      };
     }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
     
-    recognitionRef.current = recognition;
-
-    recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        form.setValue('message', transcript);
-        form.handleSubmit(onSubmit)(); 
-    };
-    
-    recognition.onerror = (event: any) => {
-        let description = `Could not recognize speech: ${event.error}. Please try again.`;
-        if (event.error === 'network') {
-          description = 'Could not connect to the voice recognition service. Please check your internet connection.';
-        } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          description = 'Microphone access was denied. Please enable it in your browser settings.';
-        }
-        toast({ title: 'Voice Error', description, variant: 'destructive' });
-        setIsListening(false);
-    };
-
-    recognition.onend = () => {
-        setIsListening(false);
-    };
-
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.abort();
@@ -104,53 +116,24 @@ export default function TriagePage() {
     };
   }, [form]);
 
-  // Text-to-speech for AI messages
-  useEffect(() => {
-    const latestMessage = messages[messages.length - 1];
-    let spokenTriageResult = false;
-    if (latestMessage?.sender === 'ai' && !latestMessage.isSpoken) {
-      
-      let contentToSpeak = '';
-      if (typeof latestMessage.content === 'string') {
-          contentToSpeak = latestMessage.content;
-      } else if (latestMessage.triageResult) {
-          if (latestMessage.triageResult.isQuery) {
-              contentToSpeak = latestMessage.triageResult.procedureExplanation?.join(' ') || '';
-          } else {
-              contentToSpeak = latestMessage.triageResult.explanation?.join(' ') || '';
-          }
-      }
-      
-      if(contentToSpeak) {
-        speak(contentToSpeak, () => {
-          setMessages(prev => prev.map(m => m.id === latestMessage.id ? {...m, isSpoken: true} : m));
-          if (latestMessage.triageResult && !latestMessage.triageResult.isQuery && !spokenTriageResult) {
-            spokenTriageResult = true;
-            const bookingQuestion = `Would you like me to find a ${latestMessage.triageResult.recommendedSpecialty} for you?`;
-            const bookingMessage: Message = {
-              id: latestMessage.id + '-followup',
-              sender: 'ai',
-              content: bookingQuestion
-            };
-            setMessages(prev => [...prev, bookingMessage]);
-          }
-        });
-      }
-    }
-  }, [messages]);
 
-
-  const speak = async (text: string, onEnd?: () => void) => {
+  const speak = async (text: string) => {
+    setAudioPlaybackState('playing');
     try {
       const { audio: audioDataUri } = await runTextToSpeech(text);
       if (audioRef.current) {
         audioRef.current.src = audioDataUri;
         audioRef.current.play();
-        if (onEnd) audioRef.current.onended = onEnd;
+        audioRef.current.onended = () => setAudioPlaybackState('stopped');
       }
     } catch (error) {
       console.error('Text-to-speech failed:', error);
-      if (onEnd) onEnd();
+      setAudioPlaybackState('stopped');
+      toast({
+        title: 'Audio Playback Error',
+        description: 'Could not play the audio response.',
+        variant: 'destructive',
+      });
     }
   }
 
@@ -178,11 +161,18 @@ export default function TriagePage() {
       const result = await runSmartTriage({
           symptoms: values.message.split(/\s*,\s*|\s+and\s+/i),
       });
+
+      let audioContent = '';
+      if (result.isQuery) {
+        audioContent = result.procedureExplanation?.join(' ') || '';
+      } else {
+        audioContent = `${result.explanation?.join(' ')} Would you like me to find a ${result.recommendedSpecialty} for you?`;
+      }
       
       const aiResponseContent = result.isQuery ? (
-          <ProcedureExplanation procedure={result.procedureExplanation} />
+          <ProcedureExplanation procedure={result.procedureExplanation} onListen={() => speak(audioContent)} audioState={audioPlaybackState} />
       ) : (
-          <TriageResult result={result} />
+          <TriageResult result={result} onListen={() => speak(audioContent)} audioState={audioPlaybackState} />
       );
 
       const aiMessage: Message = {
@@ -190,6 +180,7 @@ export default function TriagePage() {
           sender: 'ai',
           content: aiResponseContent,
           triageResult: result,
+          audioContent: audioContent,
       };
 
       setMessages(prev => [...prev, aiMessage]);
@@ -215,8 +206,16 @@ export default function TriagePage() {
     if (isListening) {
       recognitionRef.current.stop();
     } else {
-      setIsListening(true);
-      recognitionRef.current.start();
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
+        setIsListening(true);
+        recognitionRef.current.start();
+      }).catch(() => {
+         toast({
+            title: "Microphone Access Denied",
+            description: "Please enable microphone access in your browser settings to use voice commands.",
+            variant: "destructive"
+        });
+      })
     }
   };
 
@@ -282,8 +281,12 @@ export default function TriagePage() {
   );
 }
 
+interface ResultComponentProps {
+    onListen: () => void;
+    audioState: 'playing' | 'stopped';
+}
 
-function TriageResult({ result }: { result: SmartTriageOutput }) {
+function TriageResult({ result, onListen, audioState }: { result: SmartTriageOutput } & ResultComponentProps) {
   const router = useRouter();
   const getRiskCategoryClass = (category: 'low' | 'medium' | 'high' | undefined) => {
     switch (category) {
@@ -298,8 +301,14 @@ function TriageResult({ result }: { result: SmartTriageOutput }) {
   
   return (
     <div className="space-y-4">
-      <div className={cn('inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-bold', getRiskCategoryClass(result.riskCategory))}>
-        <span>Risk: {result.riskCategory?.toUpperCase()} ({result.riskScore}/100)</span>
+      <div className="flex justify-between items-start">
+        <div className={cn('inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-bold', getRiskCategoryClass(result.riskCategory))}>
+            <span>Risk: {result.riskCategory?.toUpperCase()} ({result.riskScore}/100)</span>
+        </div>
+        <Button variant="outline" size="sm" onClick={onListen} disabled={audioState === 'playing'}>
+            {audioState === 'playing' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Volume2 className="h-4 w-4 mr-2" />}
+            Listen
+        </Button>
       </div>
       
       <p><span className="font-semibold">Urgency:</span> <span className="capitalize">{result.urgency}</span></p>
@@ -326,11 +335,17 @@ function TriageResult({ result }: { result: SmartTriageOutput }) {
   );
 }
 
-function ProcedureExplanation({ procedure }: { procedure?: string[] }) {
+function ProcedureExplanation({ procedure, onListen, audioState }: { procedure?: string[] } & ResultComponentProps) {
     if (!procedure || procedure.length === 0) return null;
     return (
-        <div className="space-y-2">
-            <h4 className="font-semibold">First-Aid Information:</h4>
+        <div className="space-y-3">
+             <div className="flex justify-between items-start">
+                <h4 className="font-semibold">First-Aid Information:</h4>
+                <Button variant="outline" size="sm" onClick={onListen} disabled={audioState === 'playing'}>
+                    {audioState === 'playing' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Volume2 className="h-4 w-4 mr-2" />}
+                    Listen
+                </Button>
+            </div>
             <ul className="list-disc list-inside text-sm space-y-1">
                 {procedure.map((step, i) => (
                     <li key={i}>{step}</li>
