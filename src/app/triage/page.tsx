@@ -32,7 +32,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { WifiOff } from 'lucide-react';
 
 const triageFormSchema = z.object({
   symptoms: z.string().min(5, {
@@ -45,13 +44,10 @@ const triageFormSchema = z.object({
 
 type ConversationState = 'idle' | 'listening_symptoms' | 'listening_for_booking_confirmation';
 
-const LAST_TRIAGE_RESULT_KEY = 'lastTriageResult';
-
 export default function TriagePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [conversationState, setConversationState] = useState<ConversationState>('idle');
   const [triageResult, setTriageResult] = useState<SmartTriageOutput | null>(null);
-  const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -119,20 +115,11 @@ export default function TriagePage() {
 
     }
 
-    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-    updateOnlineStatus();
-
-    if (!navigator.onLine) {
-        const cachedResult = localStorage.getItem(LAST_TRIAGE_RESULT_KEY);
-        if (cachedResult) setTriageResult(JSON.parse(cachedResult));
-    }
-
+    // Cleanup function
     return () => {
-      window.removeEventListener('online', updateOnlineStatus);
-      window.removeEventListener('offline', updateOnlineStatus);
-      if (recognitionRef.current) recognitionRef.current.abort();
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
     };
   }, [conversationState, form, router, triageResult]);
 
@@ -154,10 +141,6 @@ export default function TriagePage() {
   }
 
   async function onSubmit(values: z.infer<typeof triageFormSchema>) {
-    if (!isOnline) {
-        toast({ title: "You are offline", description: "Please connect to the internet to run a new analysis.", variant: "destructive" });
-        return;
-    }
     setIsLoading(true);
     setTriageResult(null);
     try {
@@ -167,7 +150,6 @@ export default function TriagePage() {
           chronicFlags: values.chronicFlags?.split(',').map(s => s.trim()).filter(s => s),
       });
       setTriageResult(result);
-      localStorage.setItem(LAST_TRIAGE_RESULT_KEY, JSON.stringify(result));
       
       let resultText = '';
       let followUp = () => {};
@@ -216,7 +198,6 @@ export default function TriagePage() {
   const resetForm = () => {
     form.reset();
     setTriageResult(null);
-    localStorage.removeItem(LAST_TRIAGE_RESULT_KEY);
   }
   
   const getRiskCategoryClass = (category: 'low' | 'medium' | 'high' | undefined) => {
@@ -251,7 +232,7 @@ export default function TriagePage() {
                     </ul>
                 </div>
                  <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                    <Button variant="ghost" onClick={resetForm} disabled={!isOnline}>Ask Another Question</Button>
+                    <Button variant="ghost" onClick={resetForm}>Ask Another Question</Button>
                 </div>
             </div>
         );
@@ -332,9 +313,9 @@ export default function TriagePage() {
             )}
 
             <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                <Button variant="ghost" onClick={resetForm} disabled={!isOnline || isListening}>Start Over</Button>
+                <Button variant="ghost" onClick={resetForm} disabled={isListening}>Start Over</Button>
                 {triageResult.recommendedSpecialty && (
-                    <Button onClick={() => router.push(`/doctors?specialty=${triageResult.recommendedSpecialty}`)} className="flex-1" disabled={!isOnline || isListening}>
+                    <Button onClick={() => router.push(`/doctors?specialty=${triageResult.recommendedSpecialty}`)} className="flex-1" disabled={isListening}>
                         Find a {triageResult.recommendedSpecialty}
                     </Button>
                 )}
@@ -365,15 +346,6 @@ export default function TriagePage() {
             <CardContent>
                  {!triageResult ? (
                     <>
-                    {!isOnline && !isListening && (
-                         <Alert variant="destructive" className="mb-6">
-                            <WifiOff className="h-4 w-4" />
-                            <AlertTitle>You are currently offline</AlertTitle>
-                            <AlertDescription>
-                                You can't run a new analysis, but you can view your last result if available.
-                            </AlertDescription>
-                        </Alert>
-                    )}
                     {conversationState === 'listening_symptoms' ? (
                          <div className="text-center p-8 space-y-4">
                             <Mic className="h-12 w-12 mx-auto text-primary animate-pulse" />
@@ -454,7 +426,7 @@ export default function TriagePage() {
                             />
                         </div>
                         
-                        <Button type="submit" disabled={isLoading || !isOnline} className="w-full" size="lg">
+                        <Button type="submit" disabled={isLoading} className="w-full" size="lg">
                             {isLoading ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
@@ -467,21 +439,12 @@ export default function TriagePage() {
                     )}
                     </>
                     ) : (
-                    <div>
-                        {!isOnline && (
-                             <Alert variant="destructive" className="mb-6">
-                                <WifiOff className="h-4 w-4" />
-                                <AlertTitle>You are offline</AlertTitle>
-                                <AlertDescription>
-                                    Showing last saved result. Connect to the internet to run a new analysis.
-                                </AlertDescription>
-                            </Alert>
-                        )}
-                        {renderResult()}
-                    </div>
+                        renderResult()
                     )}
             </CardContent>
         </Card>
     </div>
   );
 }
+
+    
