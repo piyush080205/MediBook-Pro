@@ -23,7 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Stethoscope, Sparkles, Loader2, Activity, ArrowRightCircle, ShieldAlert, HeartPulse, HelpCircle, Mic, MicOff, Square, Ear } from 'lucide-react';
+import { Stethoscope, Sparkles, Loader2, Activity, ArrowRightCircle, ShieldAlert, HeartPulse, HelpCircle, Mic, Square, Ear } from 'lucide-react';
 import { runSmartTriage, runTextToSpeech } from '@/app/actions';
 import { toast } from '@/hooks/use-toast';
 import type { SmartTriageOutput } from '@/ai/flows/smart-triage-engine';
