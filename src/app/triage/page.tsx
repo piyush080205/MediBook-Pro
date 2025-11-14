@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, Loader2, ShieldAlert, Mic, Square, User, Bot, Volume2, Play } from 'lucide-react';
+import { Sparkles, Loader2, ShieldAlert, Mic, Square, User, Bot, Volume2 } from 'lucide-react';
 import { runSmartTriage, runTextToSpeech } from '@/app/actions';
 import { toast } from '@/hooks/use-toast';
 import type { SmartTriageOutput } from '@/ai/flows/smart-triage-engine';
@@ -242,7 +242,7 @@ export default function TriagePage() {
                         </Avatar>
                      )}
                      <div className={cn("max-w-md rounded-2xl p-4", message.sender === 'user' ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-secondary rounded-bl-none')}>
-                        {typeof message.content === 'string' ? <p>{message.content}</p> : message.content}
+                        {typeof message.content === 'string' ? <p>{message.content}</p> : React.cloneElement(message.content as React.ReactElement, { onListen: () => speak(message.audioContent || ''), audioState: audioPlaybackState })}
                      </div>
                       {message.sender === 'user' && (
                         <Avatar className='h-8 w-8'>
@@ -282,8 +282,8 @@ export default function TriagePage() {
 }
 
 interface ResultComponentProps {
-    onListen: () => void;
-    audioState: 'playing' | 'stopped';
+    onListen?: () => void;
+    audioState?: 'playing' | 'stopped';
 }
 
 function TriageResult({ result, onListen, audioState }: { result: SmartTriageOutput } & ResultComponentProps) {
@@ -329,7 +329,7 @@ function TriageResult({ result, onListen, audioState }: { result: SmartTriageOut
           </div>
       )}
       {result.recommendedSpecialty && (
-         <Button size="sm" className="mt-2" onClick={() => router.push(`/doctors?specialty=${result.recommendedSpecialty}`)}>Find a {result.recommendedSpecialty}</Button>
+         <p className='text-sm mt-2'>Would you like me to find a {result.recommendedSpecialty} for you?</p>
       )}
     </div>
   );
@@ -360,3 +360,5 @@ function ProcedureExplanation({ procedure, onListen, audioState }: { procedure?:
         </div>
     )
 }
+
+    
