@@ -64,15 +64,11 @@ export default function TriagePage() {
 
   // Speech Recognition setup
   useEffect(() => {
-    // This check ensures the code only runs in the browser
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      return;
+    }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        // Silently fail if not supported. The mic button will show a toast.
-        return;
-    }
-    
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
@@ -83,7 +79,6 @@ export default function TriagePage() {
     recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
         form.setValue('message', transcript);
-        // Automatically submit the form with the transcribed text
         form.handleSubmit(onSubmit)(); 
     };
     
@@ -102,31 +97,35 @@ export default function TriagePage() {
         setIsListening(false);
     };
 
-    // Cleanup function to abort recognition if the component unmounts
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.abort();
       }
     };
-  }, [form]); // form is included as it's used in onresult
+  }, [form]);
 
   // Text-to-speech for AI messages
   useEffect(() => {
     const latestMessage = messages[messages.length - 1];
     let spokenTriageResult = false;
     if (latestMessage?.sender === 'ai' && !latestMessage.isSpoken) {
-      const contentToSpeak = typeof latestMessage.content === 'string' 
-        ? latestMessage.content 
-        : (latestMessage.triageResult?.explanation?.join(' ') || '');
+      
+      let contentToSpeak = '';
+      if (typeof latestMessage.content === 'string') {
+          contentToSpeak = latestMessage.content;
+      } else if (latestMessage.triageResult) {
+          if (latestMessage.triageResult.isQuery) {
+              contentToSpeak = latestMessage.triageResult.procedureExplanation?.join(' ') || '';
+          } else {
+              contentToSpeak = latestMessage.triageResult.explanation?.join(' ') || '';
+          }
+      }
       
       if(contentToSpeak) {
         speak(contentToSpeak, () => {
-          // Mark as spoken
           setMessages(prev => prev.map(m => m.id === latestMessage.id ? {...m, isSpoken: true} : m));
-
-          // If it was a triage result (and not a query), ask to book appointment
           if (latestMessage.triageResult && !latestMessage.triageResult.isQuery && !spokenTriageResult) {
-            spokenTriageResult = true; // prevent multiple triggers
+            spokenTriageResult = true;
             const bookingQuestion = `Would you like me to find a ${latestMessage.triageResult.recommendedSpecialty} for you?`;
             const bookingMessage: Message = {
               id: latestMessage.id + '-followup',
@@ -151,7 +150,7 @@ export default function TriagePage() {
       }
     } catch (error) {
       console.error('Text-to-speech failed:', error);
-      if (onEnd) onEnd(); // Proceed even if speech fails
+      if (onEnd) onEnd();
     }
   }
 
@@ -166,7 +165,6 @@ export default function TriagePage() {
     setIsLoading(true);
 
     try {
-      // Handle navigation based on "yes" response
       const lastMessage = messages[messages.length - 1];
       if (values.message.toLowerCase().includes('yes') && lastMessage?.content.toString().includes('find a')) {
         const lastAiMessage = messages.slice().reverse().find(m => m.sender === 'ai' && m.triageResult);
@@ -178,7 +176,7 @@ export default function TriagePage() {
       }
 
       const result = await runSmartTriage({
-          symptoms: values.message.split(/\s*,\s*|\s+and\s+/i), // Split by comma or 'and'
+          symptoms: values.message.split(/\s*,\s*|\s+and\s+/i),
       });
       
       const aiResponseContent = result.isQuery ? (
@@ -347,5 +345,3 @@ function ProcedureExplanation({ procedure }: { procedure?: string[] }) {
         </div>
     )
 }
-
-    
