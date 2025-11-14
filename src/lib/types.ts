@@ -46,10 +46,15 @@ export type Clinic = {
 };
 
 export type Appointment = {
-  id: string;
+  id?: string; // Made optional for creating new appointments
   patientId: string;
   doctorId: string;
+  doctorName: string;
+  doctorSpecialty: string;
+  doctorImageId: string;
   clinicId: string;
+  clinicName: string;
+  clinicAddress: string;
   slot: {
     start: string;
     end: string;
@@ -73,5 +78,3 @@ export type EmergencyRoom = {
     mapUrl: string;
     imageId: string;
 }
-
-    

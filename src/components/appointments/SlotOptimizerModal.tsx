@@ -18,10 +18,15 @@ import { Loader2, Calendar as CalendarIcon, Sparkles } from "lucide-react";
 import type { OptimizeSlotsOutput } from "@/ai/flows/slot-optimization-engine";
 import { getDoctorById } from "@/lib/data";
 import BookingConfirmation from "./BookingConfirmation";
-import type { Doctor } from "@/lib/types";
+import type { Doctor, Appointment } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
+import { useUser, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, addDoc } from "firebase/firestore";
 
 export default function SlotOptimizerModal({ doctorId }: { doctorId: string }) {
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isLoading, setIsLoading] = useState(false);
@@ -78,12 +83,17 @@ export default function SlotOptimizerModal({ doctorId }: { doctorId: string }) {
   };
 
   const handleBooking = async (slot: { start: string; end: string }) => {
+    if (!user) {
+        toast({ title: "Please login to book an appointment.", variant: "destructive" });
+        return;
+    }
+
     setIsBooking(true);
     
     try {
         const doc = await getDoctorById(doctorId);
-        if (!doc) {
-            toast({ title: "Doctor not found", variant: "destructive" });
+        if (!doc || !doc.clinics[0]) {
+            toast({ title: "Doctor or clinic not found", variant: "destructive" });
             setIsBooking(false);
             return;
         }
@@ -91,8 +101,27 @@ export default function SlotOptimizerModal({ doctorId }: { doctorId: string }) {
         setDoctor(doc);
         setSelectedSlot(slot);
 
+        // Save appointment to Firestore
+        const appointmentData: Omit<Appointment, 'id'> = {
+            patientId: user.uid,
+            doctorId: doc.id,
+            doctorName: doc.name,
+            doctorSpecialty: doc.specialties[0],
+            doctorImageId: doc.imageId,
+            clinicId: doc.clinics[0].id,
+            clinicName: doc.clinics[0].name,
+            clinicAddress: doc.clinics[0].location.address,
+            slot: slot,
+            status: 'booked',
+            createdAt: new Date().toISOString(),
+        };
+
+        const appointmentsColRef = collection(firestore, `users/${user.uid}/appointments`);
+        await addDoc(appointmentsColRef, appointmentData);
+
+
         // In a real app, you'd get the patient's phone number from their profile
-        const patientPhoneNumber = '+919876543210'; // Using a placeholder for now
+        const patientPhoneNumber = user.phoneNumber || '+919876543210'; // Using a placeholder for now
         const startTime = new Date(slot.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const onDate = new Date(slot.start).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
         
@@ -137,7 +166,7 @@ export default function SlotOptimizerModal({ doctorId }: { doctorId: string }) {
         setOpen(isOpen);
     }}>
       <DialogTrigger asChild>
-        <Button size="lg" className="w-full sm:w-auto">
+        <Button size="lg" className="w-full sm:w-auto" disabled={isUserLoading}>
           <CalendarIcon className="mr-2 h-4 w-4" /> Book Appointment
         </Button>
       </DialogTrigger>
@@ -182,7 +211,7 @@ export default function SlotOptimizerModal({ doctorId }: { doctorId: string }) {
                                     variant="outline" 
                                     className="w-full justify-start"
                                     onClick={() => handleBooking(slot)}
-                                    disabled={isBooking}
+                                    disabled={isBooking || !user}
                                 >
                                     <div className="flex justify-between w-full items-center">
                                       <span>
