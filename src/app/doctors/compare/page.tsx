@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from "react";
-import CompareDoctorsClient from "./CompareDoctorsClient";
+import { useSearchParams } from 'next/navigation'; // ADD THIS IMPORT
 import React, { useEffect, useState } from 'react';
 import { getDoctorById } from '@/lib/data';
 import type { Doctor } from '@/lib/types';
@@ -15,7 +15,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function CompareDoctorsPage() {
+// Separate the component that uses useSearchParams
+function CompareContent() {
   const searchParams = useSearchParams();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -131,6 +132,14 @@ export default function CompareDoctorsPage() {
   );
 }
 
+// Wrap in Suspense boundary
+export default function CompareDoctorsPage() {
+  return (
+    <Suspense fallback={<CompareSkeleton />}>
+      <CompareContent />
+    </Suspense>
+  );
+}
 
 function CompareSkeleton() {
     return (
