@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getDoctors } from '@/lib/data';
 import type { Doctor } from '@/lib/types';
@@ -26,7 +26,7 @@ const specialties = [
     { name: 'Orthopedics', icon: Bone }
 ];
 
-export default function DoctorsPage() {
+function DoctorsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     
@@ -163,6 +163,14 @@ export default function DoctorsPage() {
     );
 }
 
+export default function DoctorsPage() {
+    return (
+        <Suspense fallback={<DoctorsPageSkeleton />}>
+            <DoctorsContent />
+        </Suspense>
+    );
+}
+
 function DoctorCard({ doctor, onCompareToggle, isComparing }: { doctor: Doctor, onCompareToggle: (id: string) => void, isComparing: boolean }) {
     const doctorImage = PlaceHolderImages.find(p => p.id === doctor.imageId);
     return (
@@ -236,4 +244,37 @@ function DoctorCardSkeleton() {
             </CardContent>
         </Card>
     )
+}
+
+function DoctorsPageSkeleton() {
+    return (
+        <div className="container mx-auto px-4 md:px-6 py-12">
+            <header className="text-center mb-12">
+                <Skeleton className="h-12 w-64 mx-auto mb-2" />
+                <Skeleton className="h-6 w-96 mx-auto" />
+            </header>
+            
+            <Card className="mb-8 p-6 shadow-lg">
+                <div className="grid md:grid-cols-3 gap-4 items-end">
+                    <div className="md:col-span-2">
+                        <Skeleton className="h-4 w-48 mb-2" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                    <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="mt-6">
+                    <Skeleton className="h-5 w-40 mb-3" />
+                    <div className="flex flex-wrap gap-2">
+                        {[...Array(5)].map((_, i) => (
+                            <Skeleton key={i} className="h-10 w-32" />
+                        ))}
+                    </div>
+                </div>
+            </Card>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {[...Array(6)].map((_, i) => <DoctorCardSkeleton key={i} />)}
+            </div>
+        </div>
+    );
 }
