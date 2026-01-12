@@ -1,6 +1,7 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { Suspense } from "react";
+import CompareDoctorsClient from "./CompareDoctorsClient";
 import React, { useEffect, useState } from 'react';
 import { getDoctorById } from '@/lib/data';
 import type { Doctor } from '@/lib/types';
